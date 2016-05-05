@@ -2,12 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
-	conf "github.com/cloudfoundry-incubator/cephbroker/config"
-	utils "github.com/cloudfoundry-incubator/cephbroker/utils"
+	"github.com/cloudfoundry-incubator/cephbroker/config"
 	webs "github.com/cloudfoundry-incubator/cephbroker/web_server"
+
+	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 )
 
 type Options struct {
@@ -17,37 +16,25 @@ type Options struct {
 
 var options Options
 
-func init() {
-	defaultConfigPath := utils.GetPath([]string{"assets", "config.json"})
-	flag.StringVar(&options.ConfigPath, "c", defaultConfigPath, "use '-c' option to specify the config file path")
-
-	flag.StringVar(&options.Cloud, "cloud", "cephfs", "use '--cloud' option to specify the cloud client to use: AWS or SoftLayer (SL)")
-
-	flag.Parse()
-}
-
 func main() {
-	err := checkCloudName(options.Cloud)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	config := config.Config{}
+	parseCommandLine(&config)
 
-	_, err = conf.LoadConfig(options.ConfigPath)
-	if err != nil {
-		panic(fmt.Sprintf("Error loading config file [%s]...", err.Error()))
-	}
+	webs.CreateServer(config)
 
-	server, err := webs.CreateServer(options.Cloud)
-	if err != nil {
-		panic(fmt.Sprintf("Error creating server [%s]...", err.Error))
-	}
-
-	server.Start()
 }
 
 // Private func
 
 func checkCloudName(name string) error {
 	return nil
+}
+func parseCommandLine(config *config.Config) {
+	flag.StringVar(&config.AtAddress, "listenAddr", "0.0.0.0:8001", "host:port to serve cephbroker functions")
+	flag.StringVar(&config.DataPath, "dataPath", "", "Path to directory where files are saved")
+	flag.StringVar(&config.CatalogPath, "catalogPath", "", "Path to directory where files are saved")
+
+	cf_lager.AddFlags(flag.CommandLine)
+
+	flag.Parse()
 }
