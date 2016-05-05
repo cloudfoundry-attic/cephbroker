@@ -4,7 +4,7 @@
       "name": "cephfs",
       "id": "cephfs-service-guid",
       "description": "Provides the Ceph FS volume service, including volume creation and volume mounts",
-      "requires": [],
+      "requires": [volume_mounts],
       "tags": [],
       "bindable": true,
       "metadata": {
