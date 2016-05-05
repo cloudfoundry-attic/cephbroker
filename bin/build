@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+bin=$(dirname $0)
+
+go build -o $bin/../out/go_service_broker github.com/cloudfoundry-samples/cephbroker
