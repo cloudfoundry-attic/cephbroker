@@ -6,6 +6,7 @@ import (
 	"os"
 
 	client "github.com/cloudfoundry-incubator/cephbroker/client"
+	"github.com/cloudfoundry-incubator/cephbroker/config"
 	model "github.com/cloudfoundry-incubator/cephbroker/model"
 	utils "github.com/cloudfoundry-incubator/cephbroker/utils"
 )
@@ -20,18 +21,21 @@ const (
 
 type Controller struct {
 	cephClient  client.Client
+	conf        config.Config
 	ceph_mds    string
 	instanceMap map[string]*model.ServiceInstance
 	bindingMap  map[string]*model.ServiceBinding
 }
 
-func CreateController(instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) (*Controller, error) {
+func CreateController(configuration config.Config, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) (*Controller, error) {
+
 	mds := os.Getenv("CEPH_MDS")
 	cephClient := client.NewCephClient(mds)
 
 	return &Controller{
 		cephClient:  cephClient,
 		ceph_mds:    mds,
+		conf:        configuration,
 		instanceMap: instanceMap,
 		bindingMap:  bindingMap,
 	}, nil
@@ -42,8 +46,7 @@ func (c *Controller) Catalog(w http.ResponseWriter, r *http.Request) {
 
 	var catalog model.Catalog
 	catalogFileName := "catalog.json"
-
-	err := utils.ReadAndUnmarshal(&catalog, conf.CatalogPath, catalogFileName)
+	err := utils.ReadAndUnmarshal(&catalog, c.conf.CatalogPath, catalogFileName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

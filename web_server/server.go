@@ -32,7 +32,7 @@ func CreateServer(configuration config.Config) {
 		panic(err)
 	}
 
-	controller, err := CreateController(serviceInstances, serviceBindings)
+	controller, err := CreateController(configuration, serviceInstances, serviceBindings)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,6 @@ func CreateServer(configuration config.Config) {
 // private methods
 func loadServiceInstances(conf config.Config) (map[string]*model.ServiceInstance, error) {
 	var serviceInstancesMap map[string]*model.ServiceInstance
-
 	err := utils.ReadAndUnmarshal(&serviceInstancesMap, conf.DataPath, "ServiceInstances.json")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -72,7 +71,6 @@ func loadServiceInstances(conf config.Config) (map[string]*model.ServiceInstance
 
 func loadServiceBindings(conf config.Config) (map[string]*model.ServiceBinding, error) {
 	var bindingMap map[string]*model.ServiceBinding
-
 	err := utils.ReadAndUnmarshal(&bindingMap, conf.DataPath, "ServiceBindings.json")
 
 	if err != nil {
