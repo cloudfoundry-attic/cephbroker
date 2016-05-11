@@ -1,6 +1,7 @@
 package cephbrokerhttp_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -17,7 +18,7 @@ var _ = Describe("Cephbroker Handlers", func() {
 
 	Context("when generating http handlers", func() {
 
-		FIt("should produce handler with catalog route", func() {
+		It("should produce handler with catalog route", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")
 			handler, _ := cephbrokerhttp.NewHandler(testLogger)
 			w := httptest.NewRecorder()
@@ -46,14 +47,28 @@ var _ = Describe("Cephbroker Handlers", func() {
 		It("should produce handler with create service instance route", func() {
 			testLogger := lagertest.NewTestLogger("HandlersTest")
 			handler, _ := cephbrokerhttp.NewHandler(testLogger)
+			serviceInstance := model.ServiceInstance{
+				Id:               "ceph-service-guid",
+				DashboardUrl:     "http://dashboard_url",
+				InternalId:       "ceph-service-guid",
+				ServiceId:        "ceph-service-guid",
+				PlanId:           "free-plan-guid",
+				OrganizationGuid: "organization-guid",
+				SpaceGuid:        "space-guid",
+				LastOperation:    nil,
+				Parameters:       "parameters",
+			}
 			w := httptest.NewRecorder()
-			r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", nil)
+			payload, err := json.Marshal(serviceInstance)
+			Expect(err).ToNot(HaveOccurred())
+			reader := bytes.NewReader(payload)
+			r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
 			handler.ServeHTTP(w, r)
-			Expect(w.Code).Should(Equal(200))
-			serviceInstance := model.ServiceInstance{}
+			Expect(w.Code).Should(Equal(201))
 			body, err := ioutil.ReadAll(w.Body)
 			Expect(err).ToNot(HaveOccurred())
-			err = json.Unmarshal(body, &serviceInstance)
+			createServiceResponse := model.CreateServiceInstanceResponse{}
+			err = json.Unmarshal(body, &createServiceResponse)
 			Expect(err).ToNot(HaveOccurred())
 
 		})

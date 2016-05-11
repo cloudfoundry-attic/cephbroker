@@ -5,7 +5,9 @@ import (
 
 	"github.com/cloudfoundry-incubator/cephbroker"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
+	"github.com/cloudfoundry-incubator/cephbroker/client"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
+	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
 	"github.com/cloudfoundry-incubator/volman"
 	"github.com/pivotal-golang/lager"
@@ -22,7 +24,8 @@ func NewHandler(logger lager.Logger) (http.Handler, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	controller := cephbrokerlocal.NewController()
+	cephClient := client.NewCephClient("10.0.0.106:6789", "/tmp/data/mountpoint")
+	controller := cephbrokerlocal.NewController(cephClient)
 
 	var handlers = rata.Handlers{
 		"catalog": newCatalogHandler(logger, controller),
@@ -53,27 +56,33 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 		logger.Info("start")
 		instanceId := rata.Param(req, "service_instance_guid")
 		logger.Info("instance-id", lager.Data{"id": instanceId})
-		serviceInstanceExists := controller.ServiceInstanceExists(instanceId)
-		if serviceInstanceExists == true {
-			if controller.ServiceInstancePropertiesMatch(instanceId, nil) == true {
-				// 200
+		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
+		var instance model.ServiceInstance
+
+		if serviceInstanceExists {
+			err := utils.ProvisionDataFromRequest(req, &instance)
+
+			if err != nil {
+				cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+				return
+			}
+
+			if controller.ServiceInstancePropertiesMatch(logger, instanceId, instance.Parameters) == true {
 				response := model.CreateServiceInstanceResponse{
 					DashboardUrl:  "http://dashboard_url",
 					LastOperation: nil,
 				}
-
 				cf_http_handlers.WriteJSONResponse(w, 200, response)
 				return
 			} else {
-				//409
 				cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
 				return
 			}
 		}
-		createResponse, err := controller.CreateServiceInstance(instanceId)
-		if err != nil {
+		createResponse, err := controller.CreateServiceInstance(logger, instanceId, instance.Parameters)
 
-			cf_http_handlers.WriteJSONResponse(w, 201, createResponse)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
 			return
 		}
 		cf_http_handlers.WriteJSONResponse(w, 201, createResponse)

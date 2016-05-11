@@ -62,6 +62,19 @@ func Unmarshall(r *http.Request, object interface{}) error {
 
 	return nil
 }
+func ProvisionDataFromRequest(r *http.Request, object interface{}) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(body, object)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func ExtractVarsFromRequest(r *http.Request, varName string) string {
 	return mux.Vars(r)[varName]
@@ -116,13 +129,14 @@ func Exists(path string) bool {
 	return true
 }
 
-func MkDir(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+func MkDir(path string) error {
+	var err error
+	if _, err = os.Stat(path); os.IsNotExist(err) {
 		err = os.MkdirAll(path, 0700)
 		if err != nil {
-			return false
+			return err
 		}
 	}
 
-	return true
+	return err
 }

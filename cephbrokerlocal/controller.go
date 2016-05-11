@@ -1,22 +1,27 @@
 package cephbrokerlocal
 
-import "github.com/cloudfoundry-incubator/cephbroker/model"
+import (
+	"github.com/cloudfoundry-incubator/cephbroker/client"
+	"github.com/cloudfoundry-incubator/cephbroker/model"
+	"github.com/pivotal-golang/lager"
+)
 
 type Controller interface {
 	GetCatalog() (model.Catalog, error)
-	CreateServiceInstance(service_instance_id string) (model.CreateServiceInstanceResponse, error)
-	ServiceInstanceExists(service_instance_id string) bool
-	ServiceInstancePropertiesMatch(service_instance_id string, properties map[string]interface{}) bool
+	CreateServiceInstance(logger lager.Logger, service_instance_id string, properties interface{}) (model.CreateServiceInstanceResponse, error)
+	ServiceInstanceExists(logger lager.Logger, service_instance_id string) bool
+	ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, properties interface{}) bool
 }
 
-type CephController struct {
+type cephController struct {
+	cephClient client.Client
 }
 
-func NewController() Controller {
-	return &CephController{}
+func NewController(cephClient client.Client) Controller {
+	return &cephController{cephClient: cephClient}
 }
 
-func (c *CephController) GetCatalog() (model.Catalog, error) {
+func (c *cephController) GetCatalog() (model.Catalog, error) {
 	plan := model.ServicePlan{
 		Name:        "free",
 		Id:          "free-plan-guid",
@@ -44,13 +49,22 @@ func (c *CephController) GetCatalog() (model.Catalog, error) {
 	return catalog, nil
 }
 
-func (c *CephController) CreateServiceInstance(service_instance_id string) (model.CreateServiceInstanceResponse, error) {
-	//check if filesystem is mounted
+func (c *cephController) CreateServiceInstance(logger lager.Logger, service_instance_id string, properties interface{}) (model.CreateServiceInstanceResponse, error) {
+	logger = logger.Session("create-service-instance")
+	logger.Info("start")
+	defer logger.Info("end")
+	mounted := c.cephClient.IsFilesystemMounted(logger)
+	if !mounted {
+		_, err := c.cephClient.MountFileSystem(logger, "root")
+		if err != nil {
+			return model.CreateServiceInstanceResponse{}, err
+		}
 
-	//else mount
-
-	//create share
-
+	}
+	_, err := c.cephClient.CreateShare(logger, service_instance_id)
+	if err != nil {
+		return model.CreateServiceInstanceResponse{}, err
+	}
 	response := model.CreateServiceInstanceResponse{
 		DashboardUrl:  "http://dashboard_url",
 		LastOperation: nil,
@@ -58,10 +72,10 @@ func (c *CephController) CreateServiceInstance(service_instance_id string) (mode
 	return response, nil
 }
 
-func (c *CephController) ServiceInstanceExists(service_instance_id string) bool {
+func (c *cephController) ServiceInstanceExists(logger lager.Logger, service_instance_id string) bool {
 	return false
 }
 
-func (c *CephController) ServiceInstancePropertiesMatch(service_instance_id string, properties map[string]interface{}) bool {
+func (c *cephController) ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, properties interface{}) bool {
 	return false
 }
