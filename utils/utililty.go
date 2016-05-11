@@ -49,7 +49,7 @@ func WriteResponse(w http.ResponseWriter, code int, object interface{}) {
 	fmt.Fprintf(w, string(data))
 }
 
-func ProvisionDataFromRequest(r *http.Request, object interface{}) error {
+func Unmarshall(r *http.Request, object interface{}) error {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
