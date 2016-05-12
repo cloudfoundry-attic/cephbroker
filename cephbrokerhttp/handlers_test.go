@@ -48,7 +48,7 @@ var _ = Describe("Cephbroker Handlers", func() {
 			It("should produce valid create service instance response", func() {
 				successfullCreateService(handler, fakeController)
 			})
-			It("should error if service instance already exists with different properties", func() {
+			It("should return 409 if service instance already exists with different properties", func() {
 				successfullCreateService(handler, fakeController)
 				fakeController.ServiceInstanceExistsReturns(true)
 				fakeController.ServiceInstancePropertiesMatchReturns(false)
@@ -73,7 +73,7 @@ var _ = Describe("Cephbroker Handlers", func() {
 				handler.ServeHTTP(w, r)
 				Expect(w.Code).Should(Equal(409))
 			})
-			It("should not error if service instance already exists with same properties", func() {
+			It("should return 200 if service instance already exists with same properties", func() {
 				successfullCreateService(handler, fakeController)
 				fakeController.ServiceInstanceExistsReturns(true)
 				fakeController.ServiceInstancePropertiesMatchReturns(true)

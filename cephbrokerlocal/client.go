@@ -75,7 +75,7 @@ func (c *CephClient) CreateShare(logger lager.Logger, shareName string) (string,
 	logger = logger.Session("create-share")
 	logger.Info("start")
 	defer logger.Info("end")
-
+	logger.Info("share-name", lager.Data{shareName: shareName})
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
 	err := c.systemUtil.MkdirAll(sharePath, os.ModePerm)
 	if err != nil {

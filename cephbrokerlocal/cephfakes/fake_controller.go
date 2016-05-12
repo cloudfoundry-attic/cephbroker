@@ -19,12 +19,12 @@ type FakeController struct {
 		result1 model.Catalog
 		result2 error
 	}
-	CreateServiceInstanceStub        func(logger lager.Logger, service_instance_id string, properties interface{}) (model.CreateServiceInstanceResponse, error)
+	CreateServiceInstanceStub        func(logger lager.Logger, instanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error)
 	createServiceInstanceMutex       sync.RWMutex
 	createServiceInstanceArgsForCall []struct {
-		logger              lager.Logger
-		service_instance_id string
-		properties          interface{}
+		logger     lager.Logger
+		instanceId string
+		instance   model.ServiceInstance
 	}
 	createServiceInstanceReturns struct {
 		result1 model.CreateServiceInstanceResponse
@@ -39,12 +39,12 @@ type FakeController struct {
 	serviceInstanceExistsReturns struct {
 		result1 bool
 	}
-	ServiceInstancePropertiesMatchStub        func(logger lager.Logger, service_instance_id string, properties interface{}) bool
+	ServiceInstancePropertiesMatchStub        func(logger lager.Logger, service_instance_id string, instance model.ServiceInstance) bool
 	serviceInstancePropertiesMatchMutex       sync.RWMutex
 	serviceInstancePropertiesMatchArgsForCall []struct {
 		logger              lager.Logger
 		service_instance_id string
-		properties          interface{}
+		instance            model.ServiceInstance
 	}
 	serviceInstancePropertiesMatchReturns struct {
 		result1 bool
@@ -84,16 +84,16 @@ func (fake *FakeController) GetCatalogReturns(result1 model.Catalog, result2 err
 	}{result1, result2}
 }
 
-func (fake *FakeController) CreateServiceInstance(logger lager.Logger, service_instance_id string, properties interface{}) (model.CreateServiceInstanceResponse, error) {
+func (fake *FakeController) CreateServiceInstance(logger lager.Logger, instanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error) {
 	fake.createServiceInstanceMutex.Lock()
 	fake.createServiceInstanceArgsForCall = append(fake.createServiceInstanceArgsForCall, struct {
-		logger              lager.Logger
-		service_instance_id string
-		properties          interface{}
-	}{logger, service_instance_id, properties})
+		logger     lager.Logger
+		instanceId string
+		instance   model.ServiceInstance
+	}{logger, instanceId, instance})
 	fake.createServiceInstanceMutex.Unlock()
 	if fake.CreateServiceInstanceStub != nil {
-		return fake.CreateServiceInstanceStub(logger, service_instance_id, properties)
+		return fake.CreateServiceInstanceStub(logger, instanceId, instance)
 	} else {
 		return fake.createServiceInstanceReturns.result1, fake.createServiceInstanceReturns.result2
 	}
@@ -105,10 +105,10 @@ func (fake *FakeController) CreateServiceInstanceCallCount() int {
 	return len(fake.createServiceInstanceArgsForCall)
 }
 
-func (fake *FakeController) CreateServiceInstanceArgsForCall(i int) (lager.Logger, string, interface{}) {
+func (fake *FakeController) CreateServiceInstanceArgsForCall(i int) (lager.Logger, string, model.ServiceInstance) {
 	fake.createServiceInstanceMutex.RLock()
 	defer fake.createServiceInstanceMutex.RUnlock()
-	return fake.createServiceInstanceArgsForCall[i].logger, fake.createServiceInstanceArgsForCall[i].service_instance_id, fake.createServiceInstanceArgsForCall[i].properties
+	return fake.createServiceInstanceArgsForCall[i].logger, fake.createServiceInstanceArgsForCall[i].instanceId, fake.createServiceInstanceArgsForCall[i].instance
 }
 
 func (fake *FakeController) CreateServiceInstanceReturns(result1 model.CreateServiceInstanceResponse, result2 error) {
@@ -152,16 +152,16 @@ func (fake *FakeController) ServiceInstanceExistsReturns(result1 bool) {
 	}{result1}
 }
 
-func (fake *FakeController) ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, properties interface{}) bool {
+func (fake *FakeController) ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, instance model.ServiceInstance) bool {
 	fake.serviceInstancePropertiesMatchMutex.Lock()
 	fake.serviceInstancePropertiesMatchArgsForCall = append(fake.serviceInstancePropertiesMatchArgsForCall, struct {
 		logger              lager.Logger
 		service_instance_id string
-		properties          interface{}
-	}{logger, service_instance_id, properties})
+		instance            model.ServiceInstance
+	}{logger, service_instance_id, instance})
 	fake.serviceInstancePropertiesMatchMutex.Unlock()
 	if fake.ServiceInstancePropertiesMatchStub != nil {
-		return fake.ServiceInstancePropertiesMatchStub(logger, service_instance_id, properties)
+		return fake.ServiceInstancePropertiesMatchStub(logger, service_instance_id, instance)
 	} else {
 		return fake.serviceInstancePropertiesMatchReturns.result1
 	}
@@ -173,10 +173,10 @@ func (fake *FakeController) ServiceInstancePropertiesMatchCallCount() int {
 	return len(fake.serviceInstancePropertiesMatchArgsForCall)
 }
 
-func (fake *FakeController) ServiceInstancePropertiesMatchArgsForCall(i int) (lager.Logger, string, interface{}) {
+func (fake *FakeController) ServiceInstancePropertiesMatchArgsForCall(i int) (lager.Logger, string, model.ServiceInstance) {
 	fake.serviceInstancePropertiesMatchMutex.RLock()
 	defer fake.serviceInstancePropertiesMatchMutex.RUnlock()
-	return fake.serviceInstancePropertiesMatchArgsForCall[i].logger, fake.serviceInstancePropertiesMatchArgsForCall[i].service_instance_id, fake.serviceInstancePropertiesMatchArgsForCall[i].properties
+	return fake.serviceInstancePropertiesMatchArgsForCall[i].logger, fake.serviceInstancePropertiesMatchArgsForCall[i].service_instance_id, fake.serviceInstancePropertiesMatchArgsForCall[i].instance
 }
 
 func (fake *FakeController) ServiceInstancePropertiesMatchReturns(result1 bool) {

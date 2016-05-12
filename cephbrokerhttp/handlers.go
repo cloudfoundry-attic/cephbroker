@@ -62,7 +62,7 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 				return
 			}
 
-			if controller.ServiceInstancePropertiesMatch(logger, instanceId, instance.Parameters) == true {
+			if controller.ServiceInstancePropertiesMatch(logger, instanceId, instance) == true {
 				response := model.CreateServiceInstanceResponse{
 					DashboardUrl:  "http://dashboard_url",
 					LastOperation: nil,
@@ -74,7 +74,7 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 				return
 			}
 		}
-		createResponse, err := controller.CreateServiceInstance(logger, instanceId, instance.Parameters)
+		createResponse, err := controller.CreateServiceInstance(logger, instanceId, instance)
 
 		if err != nil {
 			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
