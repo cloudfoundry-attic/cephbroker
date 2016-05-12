@@ -1,27 +1,31 @@
 package cephbrokerlocal
 
 import (
-	"github.com/cloudfoundry-incubator/cephbroker/client"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter -o ./cephfakes/fake_controller.go . Controller
+
 type Controller interface {
-	GetCatalog() (model.Catalog, error)
+	GetCatalog(logger lager.Logger) (model.Catalog, error)
 	CreateServiceInstance(logger lager.Logger, service_instance_id string, properties interface{}) (model.CreateServiceInstanceResponse, error)
 	ServiceInstanceExists(logger lager.Logger, service_instance_id string) bool
 	ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, properties interface{}) bool
 }
 
 type cephController struct {
-	cephClient client.Client
+	cephClient Client
 }
 
-func NewController(cephClient client.Client) Controller {
+func NewController(cephClient Client) Controller {
 	return &cephController{cephClient: cephClient}
 }
 
-func (c *cephController) GetCatalog() (model.Catalog, error) {
+func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) {
+	logger = logger.Session("get-catalog")
+	logger.Info("start")
+	defer logger.Info("end")
 	plan := model.ServicePlan{
 		Name:        "free",
 		Id:          "free-plan-guid",
@@ -45,7 +49,6 @@ func (c *cephController) GetCatalog() (model.Catalog, error) {
 	catalog := model.Catalog{
 		Services: []model.Service{service},
 	}
-
 	return catalog, nil
 }
 
@@ -55,16 +58,17 @@ func (c *cephController) CreateServiceInstance(logger lager.Logger, service_inst
 	defer logger.Info("end")
 	mounted := c.cephClient.IsFilesystemMounted(logger)
 	if !mounted {
-		_, err := c.cephClient.MountFileSystem(logger, "root")
+		_, err := c.cephClient.MountFileSystem(logger, "/")
 		if err != nil {
 			return model.CreateServiceInstanceResponse{}, err
 		}
 
 	}
-	_, err := c.cephClient.CreateShare(logger, service_instance_id)
+	mountpoint, err := c.cephClient.CreateShare(logger, service_instance_id)
 	if err != nil {
 		return model.CreateServiceInstanceResponse{}, err
 	}
+	logger.Info("mountpoint-created", lager.Data{mountpoint: mountpoint})
 	response := model.CreateServiceInstanceResponse{
 		DashboardUrl:  "http://dashboard_url",
 		LastOperation: nil,

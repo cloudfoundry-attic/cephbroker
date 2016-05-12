@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerhttp"
+	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
 	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
@@ -54,7 +55,9 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 }
 
 func createCephBrokerServer(logger lager.Logger, atAddress string) grouper.Members {
-	handler, err := cephbrokerhttp.NewHandler(logger)
+	cephClient := client.NewCephClient("10.0.0.106:6789", "/tmp/data/mountpoint")
+	controller := cephbrokerlocal.NewController(cephClient)
+	handler, err := cephbrokerhttp.NewHandler(logger, controller)
 	exitOnFailure(logger, err)
 
 	return grouper.Members{

@@ -5,7 +5,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/cephbroker"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
-	"github.com/cloudfoundry-incubator/cephbroker/client"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
@@ -19,13 +18,10 @@ func respondWithError(logger lager.Logger, info string, err error, w http.Respon
 	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.NewError(err))
 }
 
-func NewHandler(logger lager.Logger) (http.Handler, error) {
+func NewHandler(logger lager.Logger, controller cephbrokerlocal.Controller) (http.Handler, error) {
 	logger = logger.Session("server")
 	logger.Info("start")
 	defer logger.Info("end")
-
-	cephClient := client.NewCephClient("10.0.0.106:6789", "/tmp/data/mountpoint")
-	controller := cephbrokerlocal.NewController(cephClient)
 
 	var handlers = rata.Handlers{
 		"catalog": newCatalogHandler(logger, controller),
@@ -41,7 +37,7 @@ func newCatalogHandler(logger lager.Logger, controller cephbrokerlocal.Controlle
 		logger.Info("start")
 		defer logger.Info("end")
 
-		catalog, err := controller.GetCatalog()
+		catalog, err := controller.GetCatalog(logger)
 		if err != nil {
 			cf_http_handlers.WriteJSONResponse(w, http.StatusOK, struct{}{})
 			return
@@ -58,7 +54,6 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 		logger.Info("instance-id", lager.Data{"id": instanceId})
 		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
 		var instance model.ServiceInstance
-
 		if serviceInstanceExists {
 			err := utils.ProvisionDataFromRequest(req, &instance)
 
