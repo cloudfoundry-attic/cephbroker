@@ -62,7 +62,7 @@ func Unmarshall(r *http.Request, object interface{}) error {
 
 	return nil
 }
-func ProvisionDataFromRequest(r *http.Request, object interface{}) error {
+func UnmarshallDataFromRequest(r *http.Request, object interface{}) error {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err

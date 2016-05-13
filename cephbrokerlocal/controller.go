@@ -1,6 +1,8 @@
 package cephbrokerlocal
 
 import (
+	"reflect"
+
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/pivotal-golang/lager"
@@ -14,9 +16,10 @@ const (
 
 type Controller interface {
 	GetCatalog(logger lager.Logger) (model.Catalog, error)
-	CreateServiceInstance(logger lager.Logger, instanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error)
-	ServiceInstanceExists(logger lager.Logger, service_instance_id string) bool
-	ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, instance model.ServiceInstance) bool
+	CreateServiceInstance(logger lager.Logger, serverInstanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error)
+	ServiceInstanceExists(logger lager.Logger, serviceInstanceId string) bool
+	ServiceInstancePropertiesMatch(logger lager.Logger, serviceInstanceId string, instance model.ServiceInstance) bool
+	DeleteServiceInstance(logger lager.Logger, serviceInstanceId string) error
 }
 
 type cephController struct {
@@ -60,7 +63,7 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 	return catalog, nil
 }
 
-func (c *cephController) CreateServiceInstance(logger lager.Logger, instanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error) {
+func (c *cephController) CreateServiceInstance(logger lager.Logger, serviceInstanceId string, instance model.ServiceInstance) (model.CreateServiceInstanceResponse, error) {
 	logger = logger.Session("create-service-instance")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -71,20 +74,20 @@ func (c *cephController) CreateServiceInstance(logger lager.Logger, instanceId s
 			return model.CreateServiceInstanceResponse{}, err
 		}
 	}
-	mountpoint, err := c.cephClient.CreateShare(logger, instanceId)
+	mountpoint, err := c.cephClient.CreateShare(logger, serviceInstanceId)
 	if err != nil {
 		return model.CreateServiceInstanceResponse{}, err
 	}
 
 	instance.DashboardUrl = "http://dashboard_url"
-	instance.Id = instanceId
+	instance.Id = serviceInstanceId
 	instance.LastOperation = &model.LastOperation{
 		State:                    "in progress",
 		Description:              "creating service instance...",
 		AsyncPollIntervalSeconds: DEFAULT_POLLING_INTERVAL_SECONDS,
 	}
 
-	c.instanceMap[instance.Id] = &instance
+	c.instanceMap[serviceInstanceId] = &instance
 	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json")
 	if err != nil {
 		return model.CreateServiceInstanceResponse{}, err
@@ -98,14 +101,48 @@ func (c *cephController) CreateServiceInstance(logger lager.Logger, instanceId s
 	return response, nil
 }
 
-func (c *cephController) ServiceInstanceExists(logger lager.Logger, service_instance_id string) bool {
+func (c *cephController) ServiceInstanceExists(logger lager.Logger, serviceInstanceId string) bool {
 	logger = logger.Session("service-instance-exists")
 	logger.Info("start")
 	defer logger.Info("end")
-	_, exists := c.instanceMap[service_instance_id]
+	_, exists := c.instanceMap[serviceInstanceId]
 	return exists
 }
 
-func (c *cephController) ServiceInstancePropertiesMatch(logger lager.Logger, service_instance_id string, instance model.ServiceInstance) bool {
-	return false
+func (c *cephController) ServiceInstancePropertiesMatch(logger lager.Logger, serviceInstanceId string, instance model.ServiceInstance) bool {
+	logger = logger.Session("service-instance-properties-match")
+	logger.Info("start")
+	defer logger.Info("end")
+	existingServiceInstance, exists := c.instanceMap[serviceInstanceId]
+	if exists == false {
+		return false
+	}
+	if existingServiceInstance.PlanId != instance.PlanId {
+		return false
+	}
+	if existingServiceInstance.SpaceGuid != instance.SpaceGuid {
+		return false
+	}
+	if existingServiceInstance.OrganizationGuid != instance.OrganizationGuid {
+		return false
+	}
+	areParamsEqual := reflect.DeepEqual(existingServiceInstance.Parameters, instance.Parameters)
+	return areParamsEqual
+}
+
+func (c *cephController) DeleteServiceInstance(logger lager.Logger, serviceInstanceId string) error {
+	logger = logger.Session("delete-service-instance")
+	logger.Info("start")
+	defer logger.Info("end")
+	err := c.cephClient.DeleteShare(logger, serviceInstanceId)
+	if err != nil {
+		logger.Error("Error deleting share", err)
+		return err
+	}
+	delete(c.instanceMap, serviceInstanceId)
+	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json")
+	if err != nil {
+		return err
+	}
+	return nil
 }

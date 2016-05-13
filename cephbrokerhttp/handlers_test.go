@@ -3,6 +3,7 @@ package cephbrokerhttp_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,10 @@ var _ = Describe("Cephbroker Handlers", func() {
 		})
 		Context(".Catalog", func() {
 			It("should produce valid catalog response", func() {
-				fakeCatalog := model.Catalog{}
+				fakeServices := []model.Service{model.Service{Id: "some-service-id"}}
+				fakeCatalog := model.Catalog{
+					Services: fakeServices,
+				}
 				fakeController.GetCatalogReturns(fakeCatalog, nil)
 				w := httptest.NewRecorder()
 				r, _ := http.NewRequest("GET", "http://0.0.0.0/v2/catalog", nil)
@@ -42,9 +46,25 @@ var _ = Describe("Cephbroker Handlers", func() {
 				Expect(err).ToNot(HaveOccurred())
 				err = json.Unmarshal(body, &catalog)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(len(catalog.Services)).To(Equal(1))
 			})
+			It("should error on catalog generation error", func() {
+				fakeCatalog := model.Catalog{}
+				fakeController.GetCatalogReturns(fakeCatalog, fmt.Errorf("Error building catalog"))
+				w := httptest.NewRecorder()
+				r, _ := http.NewRequest("GET", "http://0.0.0.0/v2/catalog", nil)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(200))
+				catalog := model.Catalog{}
+				body, err := ioutil.ReadAll(w.Body)
+				Expect(err).ToNot(HaveOccurred())
+				err = json.Unmarshal(body, &catalog)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(catalog.Services)).To(Equal(0))
+			})
+
 		})
-		Context(".ServiceInstance", func() {
+		Context(".ServiceInstanceCreate", func() {
 			It("should produce valid create service instance response", func() {
 				successfullCreateService(handler, fakeController)
 			})
@@ -73,6 +93,36 @@ var _ = Describe("Cephbroker Handlers", func() {
 				handler.ServeHTTP(w, r)
 				Expect(w.Code).Should(Equal(409))
 			})
+			It("should return 409 if service details not valid json", func() {
+				w := httptest.NewRecorder()
+				reader := bytes.NewReader([]byte(""))
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
+			})
+			It("should return 409 if service creation fails", func() {
+				serviceInstance := model.ServiceInstance{
+					Id:               "ceph-service-guid",
+					DashboardUrl:     "http://dashboard_url",
+					InternalId:       "ceph-service-guid",
+					ServiceId:        "ceph-service-guid",
+					PlanId:           "free-plan-guid",
+					OrganizationGuid: "organization-guid",
+					SpaceGuid:        "space-guid",
+					LastOperation:    nil,
+					Parameters:       "parameters",
+				}
+				payload, err := json.Marshal(serviceInstance)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				fakeController.ServiceInstanceExistsReturns(false)
+				fakeCreateResponse := model.CreateServiceInstanceResponse{}
+				fakeController.CreateServiceInstanceReturns(fakeCreateResponse, fmt.Errorf("Error creating service instance"))
+				w := httptest.NewRecorder()
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
+			})
 			It("should return 200 if service instance already exists with same properties", func() {
 				successfullCreateService(handler, fakeController)
 				fakeController.ServiceInstanceExistsReturns(true)
@@ -97,6 +147,54 @@ var _ = Describe("Cephbroker Handlers", func() {
 				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
 				handler.ServeHTTP(w, r)
 				Expect(w.Code).Should(Equal(200))
+			})
+		})
+		Context(".ServiceInstanceDelete", func() {
+			It("should produce valid delete service instance response", func() {
+				successfullCreateService(handler, fakeController)
+				successfullDeleteService(handler, fakeController)
+			})
+			It("should return 410 if service instance does not exist", func() {
+				serviceInstance := model.ServiceInstance{
+					Id:               "ceph-service-guid",
+					DashboardUrl:     "http://dashboard_url",
+					InternalId:       "ceph-service-guid",
+					ServiceId:        "ceph-service-guid",
+					PlanId:           "free-plan-guid",
+					OrganizationGuid: "organization-guid",
+					SpaceGuid:        "space-guid",
+					LastOperation:    nil,
+					Parameters:       "parameters",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(serviceInstance)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(410))
+			})
+			It("should return 409 if service instance deletion fails", func() {
+				fakeController.ServiceInstanceExistsReturns(true)
+				fakeController.DeleteServiceInstanceReturns(fmt.Errorf("error deleting service instance"))
+				serviceInstance := model.ServiceInstance{
+					Id:               "ceph-service-guid",
+					DashboardUrl:     "http://dashboard_url",
+					InternalId:       "ceph-service-guid",
+					ServiceId:        "ceph-service-guid",
+					PlanId:           "free-plan-guid",
+					OrganizationGuid: "organization-guid",
+					SpaceGuid:        "space-guid",
+					LastOperation:    nil,
+					Parameters:       "parameters",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(serviceInstance)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
 			})
 		})
 	})
@@ -128,5 +226,26 @@ func successfullCreateService(handler http.Handler, fakeController *cephfakes.Fa
 	createServiceResponse := model.CreateServiceInstanceResponse{}
 	err = json.Unmarshal(body, &createServiceResponse)
 	Expect(err).ToNot(HaveOccurred())
+}
 
+func successfullDeleteService(handler http.Handler, fakeController *cephfakes.FakeController) {
+	serviceInstance := model.ServiceInstance{
+		Id:               "ceph-service-guid",
+		DashboardUrl:     "http://dashboard_url",
+		InternalId:       "ceph-service-guid",
+		ServiceId:        "ceph-service-guid",
+		PlanId:           "free-plan-guid",
+		OrganizationGuid: "organization-guid",
+		SpaceGuid:        "space-guid",
+		LastOperation:    nil,
+		Parameters:       "parameters",
+	}
+	fakeController.ServiceInstanceExistsReturns(true)
+	w := httptest.NewRecorder()
+	payload, err := json.Marshal(serviceInstance)
+	Expect(err).ToNot(HaveOccurred())
+	reader := bytes.NewReader(payload)
+	r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
+	handler.ServeHTTP(w, r)
+	Expect(w.Code).Should(Equal(200))
 }

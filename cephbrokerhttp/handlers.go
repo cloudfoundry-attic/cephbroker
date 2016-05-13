@@ -8,15 +8,9 @@ import (
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	cf_http_handlers "github.com/cloudfoundry-incubator/cf_http/handlers"
-	"github.com/cloudfoundry-incubator/volman"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
-
-func respondWithError(logger lager.Logger, info string, err error, w http.ResponseWriter) {
-	logger.Error(info, err)
-	cf_http_handlers.WriteJSONResponse(w, http.StatusInternalServerError, volman.NewError(err))
-}
 
 func NewHandler(logger lager.Logger, controller cephbrokerlocal.Controller) (http.Handler, error) {
 	logger = logger.Session("server")
@@ -26,6 +20,7 @@ func NewHandler(logger lager.Logger, controller cephbrokerlocal.Controller) (htt
 	var handlers = rata.Handlers{
 		"catalog": newCatalogHandler(logger, controller),
 		"create":  newCreateServiceInstanceHandler(logger, controller),
+		"delete":  newDeleteServiceInstanceHandler(logger, controller),
 	}
 
 	return rata.NewRouter(cephbroker.Routes, handlers)
@@ -54,14 +49,12 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 		logger.Info("instance-id", lager.Data{"id": instanceId})
 		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
 		var instance model.ServiceInstance
+		err := utils.UnmarshallDataFromRequest(req, &instance)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+			return
+		}
 		if serviceInstanceExists {
-			err := utils.ProvisionDataFromRequest(req, &instance)
-
-			if err != nil {
-				cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
-				return
-			}
-
 			if controller.ServiceInstancePropertiesMatch(logger, instanceId, instance) == true {
 				response := model.CreateServiceInstanceResponse{
 					DashboardUrl:  "http://dashboard_url",
@@ -75,11 +68,29 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 			}
 		}
 		createResponse, err := controller.CreateServiceInstance(logger, instanceId, instance)
-
 		if err != nil {
 			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
 			return
 		}
 		cf_http_handlers.WriteJSONResponse(w, 201, createResponse)
+	}
+}
+func newDeleteServiceInstanceHandler(logger lager.Logger, controller cephbrokerlocal.Controller) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		logger := logger.Session("delete")
+		logger.Info("start")
+		instanceId := rata.Param(req, "service_instance_guid")
+		logger.Info("instance-id", lager.Data{"id": instanceId})
+		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
+		if serviceInstanceExists == false {
+			cf_http_handlers.WriteJSONResponse(w, 410, struct{}{})
+			return
+		}
+		err := controller.DeleteServiceInstance(logger, instanceId)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+			return
+		}
+		cf_http_handlers.WriteJSONResponse(w, 200, struct{}{})
 	}
 }
