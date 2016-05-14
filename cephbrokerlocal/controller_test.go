@@ -57,221 +57,221 @@ var _ = Describe("Cephbrokerlocal", func() {
 
 			Expect(catalog.Services[0].Bindable).To(Equal(true))
 		})
-		Context(".CreateServiceInstance", func() {
-			var (
-				instance model.ServiceInstance
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+	})
+	Context(".CreateServiceInstance", func() {
+		var (
+			instance model.ServiceInstance
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
 
-			})
-			It("should create a valid service instance", func() {
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			})
-			Context("should fail to create service instance", func() {
-				It("when base filesystem directory creation errors", func() {
-					fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
-
-					_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create local directory '%s', mount filesystem failed", localMountPoint)))
-				})
-				It("when filesystem mount fails", func() {
-					fakeInvoker.InvokeReturns(fmt.Errorf("failed to mount filesystem"))
-					_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("failed to mount filesystem"))
-				})
-				It("when share creation errors", func() {
-					properties := map[string]interface{}{"some-property": "some-value"}
-					instance.Parameters = properties
-					// to ensure filesystem is mounted(on first creation)
-					_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
-					Expect(err).ToNot(HaveOccurred())
-
-					fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
-					_, err = controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create share '%s'", path.Join(localMountPoint, "service-instance-guid"))))
-				})
-				It("should error when updating internal bookkeeping fails", func() {
-					controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
-					_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_instances.json: no such file or directory")))
-				})
-
-			})
 		})
-		Context(".ServiceInstanceExists", func() {
-			var (
-				instance model.ServiceInstance
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
-
-			})
-			It("should confirm existence of service instance", func() {
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
-				Expect(serviceExists).To(Equal(true))
-			})
-			It("should confirm non-existence of service instance", func() {
-				serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
-				Expect(serviceExists).To(Equal(false))
-			})
+		It("should create a valid service instance", func() {
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
 		})
-		Context(".ServiceInstancePropertiesMatch", func() {
-			var (
-				instance model.ServiceInstance
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+		Context("should fail to create service instance", func() {
+			It("when base filesystem directory creation errors", func() {
+				fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
 
+				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create local directory '%s', mount filesystem failed", localMountPoint)))
 			})
-			It("should return true if properties match", func() {
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				anotherInstance := model.ServiceInstance{}
+			It("when filesystem mount fails", func() {
+				fakeInvoker.InvokeReturns(fmt.Errorf("failed to mount filesystem"))
+				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("failed to mount filesystem"))
+			})
+			It("when share creation errors", func() {
 				properties := map[string]interface{}{"some-property": "some-value"}
-				anotherInstance.Parameters = properties
-				anotherInstance.PlanId = "some-planId"
-				propertiesMatch := controller.ServiceInstancePropertiesMatch(testLogger, serviceGuid, anotherInstance)
-				Expect(propertiesMatch).To(Equal(true))
-			})
-			It("should return false if properties do not match", func() {
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				anotherInstance := model.ServiceInstance{}
-				properties := map[string]interface{}{"some-property": "some-value"}
-				anotherInstance.Parameters = properties
-				anotherInstance.PlanId = "some-other-planId"
-				propertiesMatch := controller.ServiceInstancePropertiesMatch(testLogger, serviceGuid, anotherInstance)
-				Expect(propertiesMatch).ToNot(Equal(true))
-			})
-		})
-		Context(".ServiceInstanceDelete", func() {
-			var (
-				instance model.ServiceInstance
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
-			})
-			It("should delete service instance", func() {
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+				instance.Parameters = properties
+				// to ensure filesystem is mounted(on first creation)
+				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).ToNot(HaveOccurred())
 
-				serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
-				Expect(serviceExists).To(Equal(false))
-			})
-			It("should error when trying to delete non-existence service instance", func() {
-				fakeSystemUtil.RemoveReturns(fmt.Errorf("error-in-delete-share"))
-				err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+				fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
+				_, err = controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("failed to delete share '%s'", path.Join(localMountPoint, serviceGuid))))
+				Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create share '%s'", path.Join(localMountPoint, "service-instance-guid"))))
 			})
 			It("should error when updating internal bookkeeping fails", func() {
 				controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
-				err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_instances.json: no such file or directory")))
 			})
 
 		})
-		Context(".BindServiceInstance", func() {
-			var (
-				instance    model.ServiceInstance
-				bindingInfo model.ServiceBinding
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
-				bindingInfo = model.ServiceBinding{}
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			})
-			It("should be able bind service instance", func() {
-				fakeSystemUtil.ExistsReturns(true)
-				bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(bindingResponse.VolumeMounts).ToNot(BeNil())
-				Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
-			})
-			Context("should fail", func() {
-				It("when unable to find the backing share", func() {
-					fakeSystemUtil.ExistsReturns(false)
-					_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("share not found, internal error"))
-				})
-				It("when updating internal bookkeeping fails", func() {
-					controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
-					fakeSystemUtil.ExistsReturns(true)
-					_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_bindings.json: no such file or directory")))
-				})
-			})
-		})
-		Context(".ServiceBindingExists", func() {
-			var (
-				instance  model.ServiceInstance
-				bindingId string
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
-				bindingId = "some-binding-id"
-			})
-			It("should confirm existence of service instance", func() {
-				binding := model.ServiceBinding{}
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
-				bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
-				Expect(bindingExists).To(Equal(true))
-			})
-			It("should confirm non-existence of service binding", func() {
-				bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
-				Expect(bindingExists).To(Equal(false))
-			})
-		})
-		Context(".ServiceBindingPropertiesMatch", func() {
-			var (
-				instance  model.ServiceInstance
-				bindingId string
-			)
-			BeforeEach(func() {
-				instance = model.ServiceInstance{}
-				instance.PlanId = "some-planId"
-				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
-				bindingId = "some-binding-id"
+	})
+	Context(".ServiceInstanceExists", func() {
+		var (
+			instance model.ServiceInstance
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
 
+		})
+		It("should confirm existence of service instance", func() {
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
+			Expect(serviceExists).To(Equal(true))
+		})
+		It("should confirm non-existence of service instance", func() {
+			serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
+			Expect(serviceExists).To(Equal(false))
+		})
+	})
+	Context(".ServiceInstancePropertiesMatch", func() {
+		var (
+			instance model.ServiceInstance
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+
+		})
+		It("should return true if properties match", func() {
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			anotherInstance := model.ServiceInstance{}
+			properties := map[string]interface{}{"some-property": "some-value"}
+			anotherInstance.Parameters = properties
+			anotherInstance.PlanId = "some-planId"
+			propertiesMatch := controller.ServiceInstancePropertiesMatch(testLogger, serviceGuid, anotherInstance)
+			Expect(propertiesMatch).To(Equal(true))
+		})
+		It("should return false if properties do not match", func() {
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			anotherInstance := model.ServiceInstance{}
+			properties := map[string]interface{}{"some-property": "some-value"}
+			anotherInstance.Parameters = properties
+			anotherInstance.PlanId = "some-other-planId"
+			propertiesMatch := controller.ServiceInstancePropertiesMatch(testLogger, serviceGuid, anotherInstance)
+			Expect(propertiesMatch).ToNot(Equal(true))
+		})
+	})
+	Context(".ServiceInstanceDelete", func() {
+		var (
+			instance model.ServiceInstance
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+		})
+		It("should delete service instance", func() {
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+			Expect(err).ToNot(HaveOccurred())
+
+			serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
+			Expect(serviceExists).To(Equal(false))
+		})
+		It("should error when trying to delete non-existence service instance", func() {
+			fakeSystemUtil.RemoveReturns(fmt.Errorf("error-in-delete-share"))
+			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to delete share '%s'", path.Join(localMountPoint, serviceGuid))))
+		})
+		It("should error when updating internal bookkeeping fails", func() {
+			controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
+			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_instances.json: no such file or directory")))
+		})
+
+	})
+	Context(".BindServiceInstance", func() {
+		var (
+			instance    model.ServiceInstance
+			bindingInfo model.ServiceBinding
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+			bindingInfo = model.ServiceBinding{}
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+		})
+		It("should be able bind service instance", func() {
+			fakeSystemUtil.ExistsReturns(true)
+			bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(bindingResponse.VolumeMounts).ToNot(BeNil())
+			Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
+		})
+		Context("should fail", func() {
+			It("when unable to find the backing share", func() {
+				fakeSystemUtil.ExistsReturns(false)
+				_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("share not found, internal error"))
 			})
-			It("should return true if properties match", func() {
-				binding := model.ServiceBinding{}
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
-				anotherBinding := model.ServiceBinding{}
-				propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
-				Expect(propertiesMatch).To(Equal(true))
+			It("when updating internal bookkeeping fails", func() {
+				controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
+				fakeSystemUtil.ExistsReturns(true)
+				_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_bindings.json: no such file or directory")))
 			})
-			It("should return false if properties do not match", func() {
-				binding := model.ServiceBinding{}
-				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
-				anotherBinding := model.ServiceBinding{}
-				anotherBinding.AppId = "some-other-appId"
-				propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
-				Expect(propertiesMatch).ToNot(Equal(true))
-			})
+		})
+	})
+	Context(".ServiceBindingExists", func() {
+		var (
+			instance  model.ServiceInstance
+			bindingId string
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+			bindingId = "some-binding-id"
+		})
+		It("should confirm existence of service instance", func() {
+			binding := model.ServiceBinding{}
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
+			Expect(bindingExists).To(Equal(true))
+		})
+		It("should confirm non-existence of service binding", func() {
+			bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
+			Expect(bindingExists).To(Equal(false))
+		})
+	})
+	Context(".ServiceBindingPropertiesMatch", func() {
+		var (
+			instance  model.ServiceInstance
+			bindingId string
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+			bindingId = "some-binding-id"
+
+		})
+		It("should return true if properties match", func() {
+			binding := model.ServiceBinding{}
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			anotherBinding := model.ServiceBinding{}
+			propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
+			Expect(propertiesMatch).To(Equal(true))
+		})
+		It("should return false if properties do not match", func() {
+			binding := model.ServiceBinding{}
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			anotherBinding := model.ServiceBinding{}
+			anotherBinding.AppId = "some-other-appId"
+			propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
+			Expect(propertiesMatch).ToNot(Equal(true))
 		})
 	})
 })
