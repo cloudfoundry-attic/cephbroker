@@ -1,6 +1,7 @@
 package cephbrokerlocal
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/cloudfoundry-incubator/cephbroker/model"
@@ -20,6 +21,10 @@ type Controller interface {
 	ServiceInstanceExists(logger lager.Logger, serviceInstanceId string) bool
 	ServiceInstancePropertiesMatch(logger lager.Logger, serviceInstanceId string, instance model.ServiceInstance) bool
 	DeleteServiceInstance(logger lager.Logger, serviceInstanceId string) error
+	BindServiceInstance(logger lager.Logger, serverInstanceId string, bindingId string, bindingInfo model.ServiceBinding) (model.CreateServiceBindingResponse, error)
+	ServiceBindingExists(logger lager.Logger, serviceInstanceId string, bindingId string) bool
+	ServiceBindingPropertiesMatch(logger lager.Logger, serviceInstanceId string, bindingId string, binding model.ServiceBinding) bool
+	GetBinding(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error)
 }
 
 type cephController struct {
@@ -145,4 +150,67 @@ func (c *cephController) DeleteServiceInstance(logger lager.Logger, serviceInsta
 		return err
 	}
 	return nil
+}
+func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanceId string, bindingId string, bindingInfo model.ServiceBinding) (model.CreateServiceBindingResponse, error) {
+	logger = logger.Session("bind-service-instance")
+	logger.Info("start")
+	defer logger.Info("end")
+	c.bindingMap[bindingId] = &bindingInfo
+	sharePath, err := c.cephClient.GetPathForShare(logger, serviceInstanceId)
+	if err != nil {
+		return model.CreateServiceBindingResponse{}, err
+	}
+	volumeMount := model.VolumeMount{Mountpath: sharePath}
+	volumeMounts := []model.VolumeMount{volumeMount}
+	createBindingResponse := model.CreateServiceBindingResponse{VolumeMounts: volumeMounts}
+	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
+	if err != nil {
+		return model.CreateServiceBindingResponse{}, err
+	}
+	return createBindingResponse, nil
+}
+
+func (c *cephController) ServiceBindingExists(logger lager.Logger, serviceInstanceId string, bindingId string) bool {
+	logger = logger.Session("service-binding-exists")
+	logger.Info("start")
+	defer logger.Info("end")
+	_, exists := c.bindingMap[bindingId]
+	return exists
+}
+
+func (c *cephController) ServiceBindingPropertiesMatch(logger lager.Logger, serviceInstanceId string, bindingId string, binding model.ServiceBinding) bool {
+	logger = logger.Session("service-binding-properties-match")
+	logger.Info("start")
+	defer logger.Info("end")
+	existingBinding, exists := c.bindingMap[bindingId]
+	if exists == false {
+		return false
+	}
+	if existingBinding.AppId != binding.AppId {
+		return false
+	}
+	if existingBinding.ServicePlanId != binding.ServicePlanId {
+		return false
+	}
+	if existingBinding.ServiceId != binding.ServiceId {
+		return false
+	}
+	if existingBinding.ServiceInstanceId != binding.ServiceInstanceId {
+		return false
+	}
+	if existingBinding.Id != binding.Id {
+		return false
+	}
+	return true
+}
+func (c *cephController) GetBinding(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error) {
+	logger = logger.Session("get-binding")
+	logger.Info("start")
+	defer logger.Info("end")
+	binding, exists := c.bindingMap[bindingId]
+	if exists == true {
+		return *binding, nil
+	}
+	return model.ServiceBinding{}, fmt.Errorf("binding not found")
+
 }

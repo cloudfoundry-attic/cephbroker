@@ -15,6 +15,7 @@ type Client interface {
 	MountFileSystem(lager.Logger, string) (string, error)
 	CreateShare(lager.Logger, string) (string, error)
 	DeleteShare(lager.Logger, string) error
+	GetPathForShare(lager.Logger, string) (string, error)
 }
 
 type CephClient struct {
@@ -99,6 +100,19 @@ func (c *CephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	return nil
 }
 
+func (c *CephClient) GetPathForShare(logger lager.Logger, shareName string) (string, error) {
+	logger = logger.Session("get-path-for-share")
+	logger.Info("start")
+	defer logger.Info("end")
+	logger.Info("share-name", lager.Data{shareName: shareName})
+	shareAbsPath := filepath.Join(c.baseLocalMountPoint, shareName)
+	exists := c.systemUtil.Exists(shareAbsPath)
+	if exists == false {
+		return "", fmt.Errorf("share not found, internal error")
+	}
+	return shareAbsPath, nil
+}
+
 func (c *CephClient) invokeCeph(logger lager.Logger, args []string) error {
 	cmd := "ceph-fuse"
 	return c.invoker.Invoke(logger, cmd, args)
@@ -110,6 +124,7 @@ type SystemUtil interface {
 	MkdirAll(path string, perm os.FileMode) error
 	WriteFile(filename string, data []byte, perm os.FileMode) error
 	Remove(string) error
+	Exists(path string) bool
 }
 type realSystemUtil struct{}
 
@@ -127,6 +142,12 @@ func (f *realSystemUtil) WriteFile(filename string, data []byte, perm os.FileMod
 
 func (f *realSystemUtil) Remove(path string) error {
 	return os.Remove(path)
+}
+func (f *realSystemUtil) Exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
 
 //go:generate counterfeiter -o ./cephfakes/fake_invoker.go . Invoker

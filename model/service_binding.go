@@ -11,11 +11,11 @@ type ServiceBinding struct {
 
 type CreateServiceBindingResponse struct {
 	// SyslogDrainUrl string      `json:"syslog_drain_url, omitempty"`
-	Credentials interface{} `json:"credentials"`
+	Credentials  interface{}   `json:"credentials"`
+	VolumeMounts []VolumeMount `json:"volume_mounts"`
 }
 
 type Credential struct {
-	MountPoints []string `json:"mount_points"`
 }
 
 type VolumeMount struct {
@@ -23,4 +23,5 @@ type VolumeMount struct {
 	Mode          string `json:"mode"`
 	Driver        string `json:"private.driver"`
 	GroupId       string `json:"private.group_id"`
+	Mountpath     string `json:"mount_path"`
 }

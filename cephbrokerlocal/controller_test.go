@@ -185,6 +185,94 @@ var _ = Describe("Cephbrokerlocal", func() {
 			})
 
 		})
+		Context(".BindServiceInstance", func() {
+			var (
+				instance    model.ServiceInstance
+				bindingInfo model.ServiceBinding
+			)
+			BeforeEach(func() {
+				instance = model.ServiceInstance{}
+				instance.PlanId = "some-planId"
+				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+				bindingInfo = model.ServiceBinding{}
+				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			})
+			It("should be able bind service instance", func() {
+				fakeSystemUtil.ExistsReturns(true)
+				bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(bindingResponse.VolumeMounts).ToNot(BeNil())
+				Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
+			})
+			Context("should fail", func() {
+				It("when unable to find the backing share", func() {
+					fakeSystemUtil.ExistsReturns(false)
+					_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("share not found, internal error"))
+				})
+				It("when updating internal bookkeeping fails", func() {
+					controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
+					fakeSystemUtil.ExistsReturns(true)
+					_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_bindings.json: no such file or directory")))
+				})
+			})
+		})
+		Context(".ServiceBindingExists", func() {
+			var (
+				instance  model.ServiceInstance
+				bindingId string
+			)
+			BeforeEach(func() {
+				instance = model.ServiceInstance{}
+				instance.PlanId = "some-planId"
+				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+				bindingId = "some-binding-id"
+			})
+			It("should confirm existence of service instance", func() {
+				binding := model.ServiceBinding{}
+				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+				bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
+				Expect(bindingExists).To(Equal(true))
+			})
+			It("should confirm non-existence of service binding", func() {
+				bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
+				Expect(bindingExists).To(Equal(false))
+			})
+		})
+		Context(".ServiceBindingPropertiesMatch", func() {
+			var (
+				instance  model.ServiceInstance
+				bindingId string
+			)
+			BeforeEach(func() {
+				instance = model.ServiceInstance{}
+				instance.PlanId = "some-planId"
+				instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+				bindingId = "some-binding-id"
+
+			})
+			It("should return true if properties match", func() {
+				binding := model.ServiceBinding{}
+				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+				anotherBinding := model.ServiceBinding{}
+				propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
+				Expect(propertiesMatch).To(Equal(true))
+			})
+			It("should return false if properties do not match", func() {
+				binding := model.ServiceBinding{}
+				successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+				successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+				anotherBinding := model.ServiceBinding{}
+				anotherBinding.AppId = "some-other-appId"
+				propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
+				Expect(propertiesMatch).ToNot(Equal(true))
+			})
+		})
 	})
 })
 
@@ -239,4 +327,12 @@ func successfullServiceInstanceCreate(testLogger lager.Logger, fakeSystemUtil *c
 	Expect(err).ToNot(HaveOccurred())
 	Expect(createResponse.DashboardUrl).ToNot(Equal(""))
 	Expect(fakeSystemUtil.MkdirAllCallCount()).To(Equal(2))
+}
+
+func successfullServiceBindingCreate(testLogger lager.Logger, fakeSystemUtil *cephfakes.FakeSystemUtil, binding model.ServiceBinding, controller Controller, serviceGuid string, bindingId string) {
+	fakeSystemUtil.ExistsReturns(true)
+	bindResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, bindingId, binding)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(bindResponse.VolumeMounts).ToNot(BeNil())
+	Expect(len(bindResponse.VolumeMounts)).To(Equal(1))
 }

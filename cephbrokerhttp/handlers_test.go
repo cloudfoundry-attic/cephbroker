@@ -197,6 +197,70 @@ var _ = Describe("Cephbroker Handlers", func() {
 				Expect(w.Code).Should(Equal(409))
 			})
 		})
+		Context(".ServiceInstanceBind", func() {
+			It("should produce valid bind service instance response", func() {
+				successfullCreateService(handler, fakeController)
+				successfullBindService(handler, fakeController)
+			})
+			It("should return 409 if binding already exists with different properties", func() {
+				successfullCreateService(handler, fakeController)
+				successfullBindService(handler, fakeController)
+				fakeController.ServiceBindingExistsReturns(true)
+				fakeController.ServiceBindingPropertiesMatchReturns(false)
+				fakeBindResponse := model.CreateServiceBindingResponse{}
+				fakeController.BindServiceInstanceReturns(fakeBindResponse, nil)
+				binding := model.ServiceBinding{
+					Id: "ceph-service-guid",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(binding)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
+			})
+			It("should return 409 if service details not valid json", func() {
+				w := httptest.NewRecorder()
+				reader := bytes.NewReader([]byte(""))
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
+			})
+			It("should return 409 if service binding fails", func() {
+				binding := model.ServiceBinding{
+					Id: "ceph-service-guid",
+				}
+				payload, err := json.Marshal(binding)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				fakeController.ServiceBindingExistsReturns(false)
+				fakeBindingResponse := model.CreateServiceBindingResponse{}
+				fakeController.BindServiceInstanceReturns(fakeBindingResponse, fmt.Errorf("Error binding service instance"))
+				w := httptest.NewRecorder()
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(409))
+			})
+			It("should return 200 if service instance already exists with same properties", func() {
+				successfullCreateService(handler, fakeController)
+				successfullBindService(handler, fakeController)
+				fakeController.ServiceBindingExistsReturns(true)
+				fakeController.ServiceBindingPropertiesMatchReturns(true)
+				fakeBindingResponse := model.CreateServiceBindingResponse{}
+				fakeController.BindServiceInstanceReturns(fakeBindingResponse, nil)
+				binding := model.ServiceBinding{
+					Id: "ceph-service-guid",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(binding)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(200))
+			})
+		})
 	})
 })
 
@@ -248,4 +312,24 @@ func successfullDeleteService(handler http.Handler, fakeController *cephfakes.Fa
 	r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid", reader)
 	handler.ServeHTTP(w, r)
 	Expect(w.Code).Should(Equal(200))
+}
+
+func successfullBindService(handler http.Handler, fakeController *cephfakes.FakeController) {
+	fakeBindResponse := model.CreateServiceBindingResponse{}
+	fakeController.BindServiceInstanceReturns(fakeBindResponse, nil)
+	binding := model.ServiceBinding{
+		Id: "ceph-service-guid",
+	}
+	w := httptest.NewRecorder()
+	payload, err := json.Marshal(binding)
+	Expect(err).ToNot(HaveOccurred())
+	reader := bytes.NewReader(payload)
+	r, _ := http.NewRequest("PUT", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+	handler.ServeHTTP(w, r)
+	Expect(w.Code).Should(Equal(201))
+	body, err := ioutil.ReadAll(w.Body)
+	Expect(err).ToNot(HaveOccurred())
+	bindingResponse := model.CreateServiceBindingResponse{}
+	err = json.Unmarshal(body, &bindingResponse)
+	Expect(err).ToNot(HaveOccurred())
 }

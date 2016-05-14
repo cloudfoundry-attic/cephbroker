@@ -36,6 +36,14 @@ type FakeSystemUtil struct {
 	removeReturns struct {
 		result1 error
 	}
+	ExistsStub        func(path string) bool
+	existsMutex       sync.RWMutex
+	existsArgsForCall []struct {
+		path string
+	}
+	existsReturns struct {
+		result1 bool
+	}
 }
 
 func (fake *FakeSystemUtil) MkdirAll(path string, perm os.FileMode) error {
@@ -139,6 +147,38 @@ func (fake *FakeSystemUtil) RemoveReturns(result1 error) {
 	fake.RemoveStub = nil
 	fake.removeReturns = struct {
 		result1 error
+	}{result1}
+}
+
+func (fake *FakeSystemUtil) Exists(path string) bool {
+	fake.existsMutex.Lock()
+	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
+		path string
+	}{path})
+	fake.existsMutex.Unlock()
+	if fake.ExistsStub != nil {
+		return fake.ExistsStub(path)
+	} else {
+		return fake.existsReturns.result1
+	}
+}
+
+func (fake *FakeSystemUtil) ExistsCallCount() int {
+	fake.existsMutex.RLock()
+	defer fake.existsMutex.RUnlock()
+	return len(fake.existsArgsForCall)
+}
+
+func (fake *FakeSystemUtil) ExistsArgsForCall(i int) string {
+	fake.existsMutex.RLock()
+	defer fake.existsMutex.RUnlock()
+	return fake.existsArgsForCall[i].path
+}
+
+func (fake *FakeSystemUtil) ExistsReturns(result1 bool) {
+	fake.ExistsStub = nil
+	fake.existsReturns = struct {
+		result1 bool
 	}{result1}
 }
 

@@ -21,6 +21,7 @@ func NewHandler(logger lager.Logger, controller cephbrokerlocal.Controller) (htt
 		"catalog": newCatalogHandler(logger, controller),
 		"create":  newCreateServiceInstanceHandler(logger, controller),
 		"delete":  newDeleteServiceInstanceHandler(logger, controller),
+		"bind":    newBindServiceInstanceHandler(logger, controller),
 	}
 
 	return rata.NewRouter(cephbroker.Routes, handlers)
@@ -47,13 +48,13 @@ func newCreateServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 		logger.Info("start")
 		instanceId := rata.Param(req, "service_instance_guid")
 		logger.Info("instance-id", lager.Data{"id": instanceId})
-		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
 		var instance model.ServiceInstance
 		err := utils.UnmarshallDataFromRequest(req, &instance)
 		if err != nil {
 			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
 			return
 		}
+		serviceInstanceExists := controller.ServiceInstanceExists(logger, instanceId)
 		if serviceInstanceExists {
 			if controller.ServiceInstancePropertiesMatch(logger, instanceId, instance) == true {
 				response := model.CreateServiceInstanceResponse{
@@ -92,5 +93,42 @@ func newDeleteServiceInstanceHandler(logger lager.Logger, controller cephbrokerl
 			return
 		}
 		cf_http_handlers.WriteJSONResponse(w, 200, struct{}{})
+	}
+}
+func newBindServiceInstanceHandler(logger lager.Logger, controller cephbrokerlocal.Controller) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		logger := logger.Session("bind")
+		logger.Info("start")
+		instanceId := rata.Param(req, "service_instance_guid")
+		logger.Info("instance-id", lager.Data{"id": instanceId})
+		bindingId := rata.Param(req, "service_binding_id")
+		logger.Info("binding-id", lager.Data{"id": bindingId})
+		var binding model.ServiceBinding
+		err := utils.UnmarshallDataFromRequest(req, &binding)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+			return
+		}
+		serviceBindingExists := controller.ServiceBindingExists(logger, instanceId, bindingId)
+		if serviceBindingExists {
+			if controller.ServiceBindingPropertiesMatch(logger, instanceId, bindingId, binding) == true {
+				response, err := controller.GetBinding(logger, instanceId, bindingId)
+				if err != nil {
+					cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+					return
+				}
+				cf_http_handlers.WriteJSONResponse(w, 200, response)
+				return
+			} else {
+				cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+				return
+			}
+		}
+		bindResponse, err := controller.BindServiceInstance(logger, instanceId, bindingId, binding)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 409, struct{}{})
+			return
+		}
+		cf_http_handlers.WriteJSONResponse(w, 201, bindResponse)
 	}
 }

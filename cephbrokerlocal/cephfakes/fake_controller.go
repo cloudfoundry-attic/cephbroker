@@ -58,6 +58,50 @@ type FakeController struct {
 	deleteServiceInstanceReturns struct {
 		result1 error
 	}
+	BindServiceInstanceStub        func(logger lager.Logger, serverInstanceId string, bindingId string, bindingInfo model.ServiceBinding) (model.CreateServiceBindingResponse, error)
+	bindServiceInstanceMutex       sync.RWMutex
+	bindServiceInstanceArgsForCall []struct {
+		logger           lager.Logger
+		serverInstanceId string
+		bindingId        string
+		bindingInfo      model.ServiceBinding
+	}
+	bindServiceInstanceReturns struct {
+		result1 model.CreateServiceBindingResponse
+		result2 error
+	}
+	ServiceBindingExistsStub        func(logger lager.Logger, serviceInstanceId string, bindingId string) bool
+	serviceBindingExistsMutex       sync.RWMutex
+	serviceBindingExistsArgsForCall []struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+	}
+	serviceBindingExistsReturns struct {
+		result1 bool
+	}
+	ServiceBindingPropertiesMatchStub        func(logger lager.Logger, serviceInstanceId string, bindingId string, binding model.ServiceBinding) bool
+	serviceBindingPropertiesMatchMutex       sync.RWMutex
+	serviceBindingPropertiesMatchArgsForCall []struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+		binding           model.ServiceBinding
+	}
+	serviceBindingPropertiesMatchReturns struct {
+		result1 bool
+	}
+	GetBindingStub        func(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error)
+	getBindingMutex       sync.RWMutex
+	getBindingArgsForCall []struct {
+		logger     lager.Logger
+		instanceId string
+		bindingId  string
+	}
+	getBindingReturns struct {
+		result1 model.ServiceBinding
+		result2 error
+	}
 }
 
 func (fake *FakeController) GetCatalog(logger lager.Logger) (model.Catalog, error) {
@@ -226,6 +270,146 @@ func (fake *FakeController) DeleteServiceInstanceReturns(result1 error) {
 	fake.deleteServiceInstanceReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeController) BindServiceInstance(logger lager.Logger, serverInstanceId string, bindingId string, bindingInfo model.ServiceBinding) (model.CreateServiceBindingResponse, error) {
+	fake.bindServiceInstanceMutex.Lock()
+	fake.bindServiceInstanceArgsForCall = append(fake.bindServiceInstanceArgsForCall, struct {
+		logger           lager.Logger
+		serverInstanceId string
+		bindingId        string
+		bindingInfo      model.ServiceBinding
+	}{logger, serverInstanceId, bindingId, bindingInfo})
+	fake.bindServiceInstanceMutex.Unlock()
+	if fake.BindServiceInstanceStub != nil {
+		return fake.BindServiceInstanceStub(logger, serverInstanceId, bindingId, bindingInfo)
+	} else {
+		return fake.bindServiceInstanceReturns.result1, fake.bindServiceInstanceReturns.result2
+	}
+}
+
+func (fake *FakeController) BindServiceInstanceCallCount() int {
+	fake.bindServiceInstanceMutex.RLock()
+	defer fake.bindServiceInstanceMutex.RUnlock()
+	return len(fake.bindServiceInstanceArgsForCall)
+}
+
+func (fake *FakeController) BindServiceInstanceArgsForCall(i int) (lager.Logger, string, string, model.ServiceBinding) {
+	fake.bindServiceInstanceMutex.RLock()
+	defer fake.bindServiceInstanceMutex.RUnlock()
+	return fake.bindServiceInstanceArgsForCall[i].logger, fake.bindServiceInstanceArgsForCall[i].serverInstanceId, fake.bindServiceInstanceArgsForCall[i].bindingId, fake.bindServiceInstanceArgsForCall[i].bindingInfo
+}
+
+func (fake *FakeController) BindServiceInstanceReturns(result1 model.CreateServiceBindingResponse, result2 error) {
+	fake.BindServiceInstanceStub = nil
+	fake.bindServiceInstanceReturns = struct {
+		result1 model.CreateServiceBindingResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeController) ServiceBindingExists(logger lager.Logger, serviceInstanceId string, bindingId string) bool {
+	fake.serviceBindingExistsMutex.Lock()
+	fake.serviceBindingExistsArgsForCall = append(fake.serviceBindingExistsArgsForCall, struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+	}{logger, serviceInstanceId, bindingId})
+	fake.serviceBindingExistsMutex.Unlock()
+	if fake.ServiceBindingExistsStub != nil {
+		return fake.ServiceBindingExistsStub(logger, serviceInstanceId, bindingId)
+	} else {
+		return fake.serviceBindingExistsReturns.result1
+	}
+}
+
+func (fake *FakeController) ServiceBindingExistsCallCount() int {
+	fake.serviceBindingExistsMutex.RLock()
+	defer fake.serviceBindingExistsMutex.RUnlock()
+	return len(fake.serviceBindingExistsArgsForCall)
+}
+
+func (fake *FakeController) ServiceBindingExistsArgsForCall(i int) (lager.Logger, string, string) {
+	fake.serviceBindingExistsMutex.RLock()
+	defer fake.serviceBindingExistsMutex.RUnlock()
+	return fake.serviceBindingExistsArgsForCall[i].logger, fake.serviceBindingExistsArgsForCall[i].serviceInstanceId, fake.serviceBindingExistsArgsForCall[i].bindingId
+}
+
+func (fake *FakeController) ServiceBindingExistsReturns(result1 bool) {
+	fake.ServiceBindingExistsStub = nil
+	fake.serviceBindingExistsReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeController) ServiceBindingPropertiesMatch(logger lager.Logger, serviceInstanceId string, bindingId string, binding model.ServiceBinding) bool {
+	fake.serviceBindingPropertiesMatchMutex.Lock()
+	fake.serviceBindingPropertiesMatchArgsForCall = append(fake.serviceBindingPropertiesMatchArgsForCall, struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+		binding           model.ServiceBinding
+	}{logger, serviceInstanceId, bindingId, binding})
+	fake.serviceBindingPropertiesMatchMutex.Unlock()
+	if fake.ServiceBindingPropertiesMatchStub != nil {
+		return fake.ServiceBindingPropertiesMatchStub(logger, serviceInstanceId, bindingId, binding)
+	} else {
+		return fake.serviceBindingPropertiesMatchReturns.result1
+	}
+}
+
+func (fake *FakeController) ServiceBindingPropertiesMatchCallCount() int {
+	fake.serviceBindingPropertiesMatchMutex.RLock()
+	defer fake.serviceBindingPropertiesMatchMutex.RUnlock()
+	return len(fake.serviceBindingPropertiesMatchArgsForCall)
+}
+
+func (fake *FakeController) ServiceBindingPropertiesMatchArgsForCall(i int) (lager.Logger, string, string, model.ServiceBinding) {
+	fake.serviceBindingPropertiesMatchMutex.RLock()
+	defer fake.serviceBindingPropertiesMatchMutex.RUnlock()
+	return fake.serviceBindingPropertiesMatchArgsForCall[i].logger, fake.serviceBindingPropertiesMatchArgsForCall[i].serviceInstanceId, fake.serviceBindingPropertiesMatchArgsForCall[i].bindingId, fake.serviceBindingPropertiesMatchArgsForCall[i].binding
+}
+
+func (fake *FakeController) ServiceBindingPropertiesMatchReturns(result1 bool) {
+	fake.ServiceBindingPropertiesMatchStub = nil
+	fake.serviceBindingPropertiesMatchReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeController) GetBinding(logger lager.Logger, instanceId string, bindingId string) (model.ServiceBinding, error) {
+	fake.getBindingMutex.Lock()
+	fake.getBindingArgsForCall = append(fake.getBindingArgsForCall, struct {
+		logger     lager.Logger
+		instanceId string
+		bindingId  string
+	}{logger, instanceId, bindingId})
+	fake.getBindingMutex.Unlock()
+	if fake.GetBindingStub != nil {
+		return fake.GetBindingStub(logger, instanceId, bindingId)
+	} else {
+		return fake.getBindingReturns.result1, fake.getBindingReturns.result2
+	}
+}
+
+func (fake *FakeController) GetBindingCallCount() int {
+	fake.getBindingMutex.RLock()
+	defer fake.getBindingMutex.RUnlock()
+	return len(fake.getBindingArgsForCall)
+}
+
+func (fake *FakeController) GetBindingArgsForCall(i int) (lager.Logger, string, string) {
+	fake.getBindingMutex.RLock()
+	defer fake.getBindingMutex.RUnlock()
+	return fake.getBindingArgsForCall[i].logger, fake.getBindingArgsForCall[i].instanceId, fake.getBindingArgsForCall[i].bindingId
+}
+
+func (fake *FakeController) GetBindingReturns(result1 model.ServiceBinding, result2 error) {
+	fake.GetBindingStub = nil
+	fake.getBindingReturns = struct {
+		result1 model.ServiceBinding
+		result2 error
+	}{result1, result2}
 }
 
 var _ cephbrokerlocal.Controller = new(FakeController)
