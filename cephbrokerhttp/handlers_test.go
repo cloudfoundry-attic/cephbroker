@@ -261,6 +261,44 @@ var _ = Describe("Cephbroker Handlers", func() {
 				Expect(w.Code).Should(Equal(200))
 			})
 		})
+		Context(".ServiceInstanceUnBind", func() {
+			It("should produce valid unbind service instance response", func() {
+				successfullCreateService(handler, fakeController)
+				successfullBindService(handler, fakeController)
+
+				fakeController.ServiceBindingExistsReturns(true)
+				binding := model.ServiceBinding{
+					Id:            "ceph-service-guid",
+					ServiceId:     "ceph-service-guid",
+					ServicePlanId: "some-plan_id",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(binding)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(200))
+
+			})
+			It("should return 410 if binding does not exist", func() {
+				successfullCreateService(handler, fakeController)
+				successfullBindService(handler, fakeController)
+				fakeController.ServiceBindingExistsReturns(false)
+				fakeController.UnbindServiceInstanceReturns(fmt.Errorf("binding does not exist"))
+				binding := model.ServiceBinding{
+					Id: "ceph-service-guid",
+				}
+				w := httptest.NewRecorder()
+				payload, err := json.Marshal(binding)
+				Expect(err).ToNot(HaveOccurred())
+				reader := bytes.NewReader(payload)
+				r, _ := http.NewRequest("DELETE", "http://0.0.0.0/v2/service_instances/cephfs-service-guid/service_bindings/cephfs-service-binding-guid", reader)
+				handler.ServeHTTP(w, r)
+				Expect(w.Code).Should(Equal(410))
+			})
+		})
+
 	})
 })
 

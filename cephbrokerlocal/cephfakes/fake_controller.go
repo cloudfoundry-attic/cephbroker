@@ -91,16 +91,26 @@ type FakeController struct {
 	serviceBindingPropertiesMatchReturns struct {
 		result1 bool
 	}
-	GetBindingStub        func(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error)
+	GetBindingStub        func(logger lager.Logger, serviceInstanceId, bindingId string) (model.ServiceBinding, error)
 	getBindingMutex       sync.RWMutex
 	getBindingArgsForCall []struct {
-		logger     lager.Logger
-		instanceId string
-		bindingId  string
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
 	}
 	getBindingReturns struct {
 		result1 model.ServiceBinding
 		result2 error
+	}
+	UnbindServiceInstanceStub        func(logger lager.Logger, serviceInstanceId string, bindingId string) error
+	unbindServiceInstanceMutex       sync.RWMutex
+	unbindServiceInstanceArgsForCall []struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+	}
+	unbindServiceInstanceReturns struct {
+		result1 error
 	}
 }
 
@@ -377,16 +387,16 @@ func (fake *FakeController) ServiceBindingPropertiesMatchReturns(result1 bool) {
 	}{result1}
 }
 
-func (fake *FakeController) GetBinding(logger lager.Logger, instanceId string, bindingId string) (model.ServiceBinding, error) {
+func (fake *FakeController) GetBinding(logger lager.Logger, serviceInstanceId string, bindingId string) (model.ServiceBinding, error) {
 	fake.getBindingMutex.Lock()
 	fake.getBindingArgsForCall = append(fake.getBindingArgsForCall, struct {
-		logger     lager.Logger
-		instanceId string
-		bindingId  string
-	}{logger, instanceId, bindingId})
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+	}{logger, serviceInstanceId, bindingId})
 	fake.getBindingMutex.Unlock()
 	if fake.GetBindingStub != nil {
-		return fake.GetBindingStub(logger, instanceId, bindingId)
+		return fake.GetBindingStub(logger, serviceInstanceId, bindingId)
 	} else {
 		return fake.getBindingReturns.result1, fake.getBindingReturns.result2
 	}
@@ -401,7 +411,7 @@ func (fake *FakeController) GetBindingCallCount() int {
 func (fake *FakeController) GetBindingArgsForCall(i int) (lager.Logger, string, string) {
 	fake.getBindingMutex.RLock()
 	defer fake.getBindingMutex.RUnlock()
-	return fake.getBindingArgsForCall[i].logger, fake.getBindingArgsForCall[i].instanceId, fake.getBindingArgsForCall[i].bindingId
+	return fake.getBindingArgsForCall[i].logger, fake.getBindingArgsForCall[i].serviceInstanceId, fake.getBindingArgsForCall[i].bindingId
 }
 
 func (fake *FakeController) GetBindingReturns(result1 model.ServiceBinding, result2 error) {
@@ -410,6 +420,40 @@ func (fake *FakeController) GetBindingReturns(result1 model.ServiceBinding, resu
 		result1 model.ServiceBinding
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeController) UnbindServiceInstance(logger lager.Logger, serviceInstanceId string, bindingId string) error {
+	fake.unbindServiceInstanceMutex.Lock()
+	fake.unbindServiceInstanceArgsForCall = append(fake.unbindServiceInstanceArgsForCall, struct {
+		logger            lager.Logger
+		serviceInstanceId string
+		bindingId         string
+	}{logger, serviceInstanceId, bindingId})
+	fake.unbindServiceInstanceMutex.Unlock()
+	if fake.UnbindServiceInstanceStub != nil {
+		return fake.UnbindServiceInstanceStub(logger, serviceInstanceId, bindingId)
+	} else {
+		return fake.unbindServiceInstanceReturns.result1
+	}
+}
+
+func (fake *FakeController) UnbindServiceInstanceCallCount() int {
+	fake.unbindServiceInstanceMutex.RLock()
+	defer fake.unbindServiceInstanceMutex.RUnlock()
+	return len(fake.unbindServiceInstanceArgsForCall)
+}
+
+func (fake *FakeController) UnbindServiceInstanceArgsForCall(i int) (lager.Logger, string, string) {
+	fake.unbindServiceInstanceMutex.RLock()
+	defer fake.unbindServiceInstanceMutex.RUnlock()
+	return fake.unbindServiceInstanceArgsForCall[i].logger, fake.unbindServiceInstanceArgsForCall[i].serviceInstanceId, fake.unbindServiceInstanceArgsForCall[i].bindingId
+}
+
+func (fake *FakeController) UnbindServiceInstanceReturns(result1 error) {
+	fake.UnbindServiceInstanceStub = nil
+	fake.unbindServiceInstanceReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ cephbrokerlocal.Controller = new(FakeController)

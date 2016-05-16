@@ -24,7 +24,8 @@ type Controller interface {
 	BindServiceInstance(logger lager.Logger, serverInstanceId string, bindingId string, bindingInfo model.ServiceBinding) (model.CreateServiceBindingResponse, error)
 	ServiceBindingExists(logger lager.Logger, serviceInstanceId string, bindingId string) bool
 	ServiceBindingPropertiesMatch(logger lager.Logger, serviceInstanceId string, bindingId string, binding model.ServiceBinding) bool
-	GetBinding(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error)
+	GetBinding(logger lager.Logger, serviceInstanceId, bindingId string) (model.ServiceBinding, error)
+	UnbindServiceInstance(logger lager.Logger, serviceInstanceId string, bindingId string) error
 }
 
 type cephController struct {
@@ -202,6 +203,19 @@ func (c *cephController) ServiceBindingPropertiesMatch(logger lager.Logger, serv
 		return false
 	}
 	return true
+}
+
+func (c *cephController) UnbindServiceInstance(logger lager.Logger, serviceInstanceId string, bindingId string) error {
+	logger = logger.Session("unbind")
+	logger.Info("start")
+	defer logger.Info("end")
+	delete(c.bindingMap, bindingId)
+	err := utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
+	if err != nil {
+		logger.Error("error-unbind", err)
+		return err
+	}
+	return nil
 }
 func (c *cephController) GetBinding(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error) {
 	logger = logger.Session("get-binding")

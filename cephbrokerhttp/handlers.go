@@ -22,6 +22,7 @@ func NewHandler(logger lager.Logger, controller cephbrokerlocal.Controller) (htt
 		"create":  newCreateServiceInstanceHandler(logger, controller),
 		"delete":  newDeleteServiceInstanceHandler(logger, controller),
 		"bind":    newBindServiceInstanceHandler(logger, controller),
+		"unbind":  newUnBindServiceInstanceHandler(logger, controller),
 	}
 
 	return rata.NewRouter(cephbroker.Routes, handlers)
@@ -130,5 +131,34 @@ func newBindServiceInstanceHandler(logger lager.Logger, controller cephbrokerloc
 			return
 		}
 		cf_http_handlers.WriteJSONResponse(w, 201, bindResponse)
+	}
+}
+
+func newUnBindServiceInstanceHandler(logger lager.Logger, controller cephbrokerlocal.Controller) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		logger := logger.Session("unbind")
+		logger.Info("start")
+		instanceId := rata.Param(req, "service_instance_guid")
+		logger.Info("instance-id", lager.Data{"id": instanceId})
+		bindingId := rata.Param(req, "service_binding_id")
+		logger.Info("binding-id", lager.Data{"id": bindingId})
+		var binding model.ServiceBinding
+		err := utils.UnmarshallDataFromRequest(req, &binding)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 410, struct{}{})
+			return
+		}
+		serviceBindingExists := controller.ServiceBindingExists(logger, instanceId, bindingId)
+		if serviceBindingExists == false {
+			cf_http_handlers.WriteJSONResponse(w, 410, err)
+			return
+		}
+		err = controller.UnbindServiceInstance(logger, instanceId, bindingId)
+		if err != nil {
+			cf_http_handlers.WriteJSONResponse(w, 410, err)
+			return
+		}
+		cf_http_handlers.WriteJSONResponse(w, 200, struct{}{})
+		return
 	}
 }

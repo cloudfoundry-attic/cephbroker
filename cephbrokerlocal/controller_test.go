@@ -274,6 +274,36 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(propertiesMatch).ToNot(Equal(true))
 		})
 	})
+	Context(".ServiceInstanceUnbind", func() {
+		var (
+			instance  model.ServiceInstance
+			bindingId string
+		)
+		BeforeEach(func() {
+			instance = model.ServiceInstance{}
+			instance.PlanId = "some-planId"
+			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
+			bindingId = "some-binding-id"
+
+			binding := model.ServiceBinding{}
+			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+		})
+		It("should delete service binding", func() {
+			err := controller.UnbindServiceInstance(testLogger, serviceGuid, bindingId)
+			Expect(err).ToNot(HaveOccurred())
+
+			exists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
+			Expect(exists).To(Equal(false))
+		})
+		It("when updating internal bookkeeping fails", func() {
+			controller = NewController(cephClient, "/non-existent-path", instanceMap, bindingMap)
+			err := controller.UnbindServiceInstance(testLogger, serviceGuid, bindingId)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("open /non-existent-path/service_bindings.json: no such file or directory"))
+		})
+	})
+
 })
 
 var _ = Describe("RealInvoker", func() {
