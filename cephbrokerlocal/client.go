@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap"
 	"github.com/pivotal-golang/lager"
 )
@@ -16,42 +17,46 @@ type Client interface {
 	CreateShare(lager.Logger, string) (string, error)
 	DeleteShare(lager.Logger, string) error
 	GetPathForShare(lager.Logger, string) (string, error)
+	GetConfigDetails(lager.Logger) (string, string, error)
 }
 
-type CephClient struct {
+type cephClient struct {
 	mds                 string
 	invoker             Invoker
 	systemUtil          SystemUtil
 	baseLocalMountPoint string
 	mounted             bool
+	keyring             string
 }
 
-func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil SystemUtil, localMountPoint string) *CephClient {
-	return &CephClient{
+func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil SystemUtil, localMountPoint string, keyringFile string) Client {
+	return &cephClient{
 		mds:                 mds,
 		invoker:             useInvoker,
 		systemUtil:          useSystemUtil,
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
+		keyring:             keyringFile,
 	}
 }
-func NewCephClient(mds string, localMountPoint string) *CephClient {
-	return &CephClient{
+func NewCephClient(mds string, localMountPoint string, keyringFile string) Client {
+	return &cephClient{
 		mds:                 mds,
 		invoker:             NewRealInvoker(),
 		systemUtil:          NewRealSystemUtil(),
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
+		keyring:             keyringFile,
 	}
 }
-func (c *CephClient) IsFilesystemMounted(logger lager.Logger) bool {
+func (c *cephClient) IsFilesystemMounted(logger lager.Logger) bool {
 	logger = logger.Session("is-filesystem-mounted")
 	logger.Info("start")
 	defer logger.Info("end")
 	return c.mounted
 }
 
-func (c *CephClient) MountFileSystem(logger lager.Logger, remoteMountPoint string) (string, error) {
+func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint string) (string, error) {
 	logger = logger.Session("mount-filesystem")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -62,7 +67,7 @@ func (c *CephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 		return "", fmt.Errorf("failed to create local directory '%s', mount filesystem failed", c.baseLocalMountPoint)
 	}
 
-	cmdArgs := []string{"-m", c.mds, "-r", remoteMountPoint, c.baseLocalMountPoint}
+	cmdArgs := []string{"-m", c.mds, "-k", c.keyring, "-r", remoteMountPoint, c.baseLocalMountPoint}
 	err = c.invokeCeph(logger, cmdArgs)
 	if err != nil {
 		logger.Error("cephfs-error", err)
@@ -72,7 +77,7 @@ func (c *CephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 	return c.baseLocalMountPoint, nil
 }
 
-func (c *CephClient) CreateShare(logger lager.Logger, shareName string) (string, error) {
+func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string, error) {
 	logger = logger.Session("create-share")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -86,7 +91,7 @@ func (c *CephClient) CreateShare(logger lager.Logger, shareName string) (string,
 	return sharePath, nil
 }
 
-func (c *CephClient) DeleteShare(logger lager.Logger, shareName string) error {
+func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	logger = logger.Session("delete-share")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -100,7 +105,7 @@ func (c *CephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	return nil
 }
 
-func (c *CephClient) GetPathForShare(logger lager.Logger, shareName string) (string, error) {
+func (c *cephClient) GetPathForShare(logger lager.Logger, shareName string) (string, error) {
 	logger = logger.Session("get-path-for-share")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -112,8 +117,18 @@ func (c *CephClient) GetPathForShare(logger lager.Logger, shareName string) (str
 	}
 	return shareAbsPath, nil
 }
+func (c *cephClient) GetConfigDetails(lager.Logger) (string, string, error) {
+	if c.mds == "" || c.keyring == "" {
+		return "", "", fmt.Errorf("Error retreiving Ceph config details")
+	}
+	contents, err := c.systemUtil.ReadFile(c.keyring)
+	if err != nil {
+		return "", "", fmt.Errorf("Error retreiving Ceph keyring")
+	}
+	return c.mds, string(contents), nil
+}
 
-func (c *CephClient) invokeCeph(logger lager.Logger, args []string) error {
+func (c *cephClient) invokeCeph(logger lager.Logger, args []string) error {
 	cmd := "ceph-fuse"
 	return c.invoker.Invoke(logger, cmd, args)
 }
@@ -125,6 +140,7 @@ type SystemUtil interface {
 	WriteFile(filename string, data []byte, perm os.FileMode) error
 	Remove(string) error
 	Exists(path string) bool
+	ReadFile(path string) ([]byte, error)
 }
 type realSystemUtil struct{}
 
@@ -148,6 +164,9 @@ func (f *realSystemUtil) Exists(path string) bool {
 		return false
 	}
 	return true
+}
+func (f *realSystemUtil) ReadFile(path string) ([]byte, error) {
+	return utils.ReadFile(path)
 }
 
 //go:generate counterfeiter -o ./cephfakes/fake_invoker.go . Invoker

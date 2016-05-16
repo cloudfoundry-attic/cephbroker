@@ -2,6 +2,7 @@ package cephbrokerlocal
 
 import (
 	"fmt"
+	"path"
 	"reflect"
 
 	"github.com/cloudfoundry-incubator/cephbroker/model"
@@ -11,6 +12,7 @@ import (
 
 const (
 	DEFAULT_POLLING_INTERVAL_SECONDS = 10
+	DEFAULT_CONTAINER_PATH           = "/var/vcap/data/"
 )
 
 //go:generate counterfeiter -o ./cephfakes/fake_controller.go . Controller
@@ -161,7 +163,15 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
 	}
-	volumeMount := model.VolumeMount{Mountpath: sharePath}
+	containerMountPath := determineContainerMountPath(bindingInfo.Parameters, serviceInstanceId)
+	mds, keyring, err := c.cephClient.GetConfigDetails(logger)
+	if err != nil {
+		return model.CreateServiceBindingResponse{}, err
+	}
+	cephConfig := model.CephConfig{MDS: mds, Keyring: keyring, RemoteMountPoint: sharePath}
+	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephfs", GroupId: serviceInstanceId, Config: cephConfig}
+
+	volumeMount := model.VolumeMount{ContainerPath: containerMountPath, Mode: "rw", Private: privateDetails}
 	volumeMounts := []model.VolumeMount{volumeMount}
 	createBindingResponse := model.CreateServiceBindingResponse{VolumeMounts: volumeMounts}
 	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
@@ -217,6 +227,7 @@ func (c *cephController) UnbindServiceInstance(logger lager.Logger, serviceInsta
 	}
 	return nil
 }
+
 func (c *cephController) GetBinding(logger lager.Logger, instanceId, bindingId string) (model.ServiceBinding, error) {
 	logger = logger.Session("get-binding")
 	logger.Info("start")
@@ -226,5 +237,14 @@ func (c *cephController) GetBinding(logger lager.Logger, instanceId, bindingId s
 		return *binding, nil
 	}
 	return model.ServiceBinding{}, fmt.Errorf("binding not found")
+}
 
+func determineContainerMountPath(parameters map[string]interface{}, volId string) string {
+	if containerPath, ok := parameters["container_path"]; ok {
+		return containerPath.(string)
+	}
+	if containerPath, ok := parameters["path"]; ok {
+		return containerPath.(string)
+	}
+	return path.Join(DEFAULT_CONTAINER_PATH, volId)
 }

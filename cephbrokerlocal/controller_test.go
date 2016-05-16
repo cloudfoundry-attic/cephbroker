@@ -34,7 +34,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 		serviceGuid = "some-service-guid"
 		fakeSystemUtil = new(cephfakes.FakeSystemUtil)
 		localMountPoint = "/tmp/share"
-		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds", fakeInvoker, fakeSystemUtil, localMountPoint)
+		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds", fakeInvoker, fakeSystemUtil, localMountPoint, "/some-keyring-file")
 		instanceMap = make(map[string]*model.ServiceInstance)
 		bindingMap = make(map[string]*model.ServiceBinding)
 		controller = NewController(cephClient, "/tmp/cephbroker", instanceMap, bindingMap)
@@ -56,6 +56,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(catalog.Services[0].Plans[0].Name).To(Equal("free"))
 
 			Expect(catalog.Services[0].Bindable).To(Equal(true))
+			Expect(catalog.Services[0].PlanUpdateable).To(Equal(false))
 		})
 	})
 	Context(".CreateServiceInstance", func() {
@@ -200,10 +201,19 @@ var _ = Describe("Cephbrokerlocal", func() {
 		})
 		It("should be able bind service instance", func() {
 			fakeSystemUtil.ExistsReturns(true)
+			fakeSystemUtil.ReadFileReturns([]byte("some keyring content"), nil)
+			bindingInfo.Parameters = map[string]interface{}{"container_path": "/some-user-specified-path"}
 			bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(bindingResponse.VolumeMounts).ToNot(BeNil())
 			Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
+			Expect(bindingResponse.VolumeMounts[0].ContainerPath).To(Equal("/some-user-specified-path"))
+			Expect(bindingResponse.VolumeMounts[0].Private).ToNot(BeNil())
+			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephfs"))
+			Expect(bindingResponse.VolumeMounts[0].Private.Config).ToNot(BeNil())
+			Expect(bindingResponse.VolumeMounts[0].Private.Config.MDS).To(Equal("some-mds"))
+			Expect(bindingResponse.VolumeMounts[0].Private.Config.Keyring).To(Equal("some keyring content"))
+
 		})
 		Context("should fail", func() {
 			It("when unable to find the backing share", func() {

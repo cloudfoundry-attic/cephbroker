@@ -29,6 +29,11 @@ var mds = flag.String(
 	"10.0.0.106:6789",
 	"host:port for ceph mds server",
 )
+var keyringFile = flag.String(
+	"keyring-file",
+	"/etc/ceph/ceph.client.admin.keyring",
+	"keyring file for ceph authentication",
+)
 var configPath = flag.String(
 	"configPath",
 	"/tmp/cephbroker",
@@ -77,7 +82,7 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 }
 
 func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Members, error) {
-	cephClient := cephbrokerlocal.NewCephClient(*mds, *defaultMountPath)
+	cephClient := cephbrokerlocal.NewCephClient(*mds, *defaultMountPath, *keyringFile)
 	existingServiceInstances, err := loadServiceInstances()
 	if err != nil {
 		return nil, err

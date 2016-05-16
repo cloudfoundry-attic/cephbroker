@@ -44,6 +44,16 @@ type FakeSystemUtil struct {
 	existsReturns struct {
 		result1 bool
 	}
+	ReadFileStub        func(path string) ([]byte, error)
+	readFileMutex       sync.RWMutex
+	readFileArgsForCall []struct {
+		path string
+	}
+	readFileReturns struct {
+		result1 []byte
+		result2 error
+	}
+	invocations map[string][][]interface{}
 }
 
 func (fake *FakeSystemUtil) MkdirAll(path string, perm os.FileMode) error {
@@ -52,6 +62,8 @@ func (fake *FakeSystemUtil) MkdirAll(path string, perm os.FileMode) error {
 		path string
 		perm os.FileMode
 	}{path, perm})
+	fake.guard("MkdirAll")
+	fake.invocations["MkdirAll"] = append(fake.invocations["MkdirAll"], []interface{}{path, perm})
 	fake.mkdirAllMutex.Unlock()
 	if fake.MkdirAllStub != nil {
 		return fake.MkdirAllStub(path, perm)
@@ -91,6 +103,8 @@ func (fake *FakeSystemUtil) WriteFile(filename string, data []byte, perm os.File
 		data     []byte
 		perm     os.FileMode
 	}{filename, dataCopy, perm})
+	fake.guard("WriteFile")
+	fake.invocations["WriteFile"] = append(fake.invocations["WriteFile"], []interface{}{filename, dataCopy, perm})
 	fake.writeFileMutex.Unlock()
 	if fake.WriteFileStub != nil {
 		return fake.WriteFileStub(filename, data, perm)
@@ -123,6 +137,8 @@ func (fake *FakeSystemUtil) Remove(arg1 string) error {
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	fake.guard("Remove")
+	fake.invocations["Remove"] = append(fake.invocations["Remove"], []interface{}{arg1})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1)
@@ -155,6 +171,8 @@ func (fake *FakeSystemUtil) Exists(path string) bool {
 	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
 		path string
 	}{path})
+	fake.guard("Exists")
+	fake.invocations["Exists"] = append(fake.invocations["Exists"], []interface{}{path})
 	fake.existsMutex.Unlock()
 	if fake.ExistsStub != nil {
 		return fake.ExistsStub(path)
@@ -180,6 +198,54 @@ func (fake *FakeSystemUtil) ExistsReturns(result1 bool) {
 	fake.existsReturns = struct {
 		result1 bool
 	}{result1}
+}
+
+func (fake *FakeSystemUtil) ReadFile(path string) ([]byte, error) {
+	fake.readFileMutex.Lock()
+	fake.readFileArgsForCall = append(fake.readFileArgsForCall, struct {
+		path string
+	}{path})
+	fake.guard("ReadFile")
+	fake.invocations["ReadFile"] = append(fake.invocations["ReadFile"], []interface{}{path})
+	fake.readFileMutex.Unlock()
+	if fake.ReadFileStub != nil {
+		return fake.ReadFileStub(path)
+	} else {
+		return fake.readFileReturns.result1, fake.readFileReturns.result2
+	}
+}
+
+func (fake *FakeSystemUtil) ReadFileCallCount() int {
+	fake.readFileMutex.RLock()
+	defer fake.readFileMutex.RUnlock()
+	return len(fake.readFileArgsForCall)
+}
+
+func (fake *FakeSystemUtil) ReadFileArgsForCall(i int) string {
+	fake.readFileMutex.RLock()
+	defer fake.readFileMutex.RUnlock()
+	return fake.readFileArgsForCall[i].path
+}
+
+func (fake *FakeSystemUtil) ReadFileReturns(result1 []byte, result2 error) {
+	fake.ReadFileStub = nil
+	fake.readFileReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeSystemUtil) Invocations() map[string][][]interface{} {
+	return fake.invocations
+}
+
+func (fake *FakeSystemUtil) guard(key string) {
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
 }
 
 var _ cephbrokerlocal.SystemUtil = new(FakeSystemUtil)
