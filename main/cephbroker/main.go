@@ -30,7 +30,7 @@ var mds = flag.String(
 	"host:port for ceph mds server",
 )
 var keyringFile = flag.String(
-	"keyring-file",
+	"keyringFile",
 	"/etc/ceph/ceph.client.admin.keyring",
 	"keyring file for ceph authentication",
 )
