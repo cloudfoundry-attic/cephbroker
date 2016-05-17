@@ -59,7 +59,7 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 		Description:     "Provides the Ceph FS volume service, including volume creation and volume mounts",
 		Bindable:        true,
 		PlanUpdateable:  false,
-		Tags:            nil,
+		Tags:            []string{"ceph"},
 		Requires:        []string{"volume_mount"},
 		Metadata:        nil,
 		Plans:           []model.ServicePlan{plan},
