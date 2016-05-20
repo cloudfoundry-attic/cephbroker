@@ -11,7 +11,12 @@ type ServiceBinding struct {
 }
 
 type CreateServiceBindingResponse struct {
+	Credentials  Credentials   `json:"credentials"`
 	VolumeMounts []VolumeMount `json:"volume_mounts"`
+}
+
+type Credentials struct {
+	URI string `json:"uri"`
 }
 
 type VolumeMount struct {

@@ -173,7 +173,8 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 
 	volumeMount := model.VolumeMount{ContainerPath: containerMountPath, Mode: "rw", Private: privateDetails}
 	volumeMounts := []model.VolumeMount{volumeMount}
-	createBindingResponse := model.CreateServiceBindingResponse{VolumeMounts: volumeMounts}
+	creds := model.Credentials{URI: ""}
+	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
 	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
