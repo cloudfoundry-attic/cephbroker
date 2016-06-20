@@ -211,9 +211,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(bindingResponse.VolumeMounts[0].Private).ToNot(BeNil())
 			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephfs"))
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).ToNot(BeNil())
-			Expect(bindingResponse.VolumeMounts[0].Private.Config.MDS).To(Equal("some-mds"))
-			Expect(bindingResponse.VolumeMounts[0].Private.Config.Keyring).To(Equal("some keyring content"))
-
+			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some-mds"))
+			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some keyring content"))
 		})
 		Context("should fail", func() {
 			It("when unable to find the backing share", func() {

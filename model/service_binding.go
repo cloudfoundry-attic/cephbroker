@@ -16,7 +16,13 @@ type CreateServiceBindingResponse struct {
 }
 
 type Credentials struct {
-	URI string `json:"uri"`
+	URI      string `json:"uri"`
+	Hostname string `json:"hostname"`
+	Port     string `json:"port"`
+	Name     string `json:"name"`
+	VHost    string `json:"vhost"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type VolumeMount struct {
@@ -28,7 +34,7 @@ type VolumeMount struct {
 type VolumeMountPrivateDetails struct {
 	Driver  string     `json:"driver"`
 	GroupId string     `json:"group_id"`
-	Config  CephConfig `json:"config"`
+	Config  string     `json:"config"`
 }
 
 type CephConfig struct {

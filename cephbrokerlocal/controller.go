@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/pivotal-golang/lager"
+	"encoding/json"
 )
 
 const (
@@ -169,11 +170,15 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 		return model.CreateServiceBindingResponse{}, err
 	}
 	cephConfig := model.CephConfig{MDS: mds, Keyring: keyring, RemoteMountPoint: sharePath}
-	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephfs", GroupId: serviceInstanceId, Config: cephConfig}
+	config, err := json.Marshal(cephConfig)
+	if err != nil {
+		return model.CreateServiceBindingResponse{}, err
+	}
+	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephfs", GroupId: serviceInstanceId, Config: string(config)}
 
 	volumeMount := model.VolumeMount{ContainerPath: containerMountPath, Mode: "rw", Private: privateDetails}
 	volumeMounts := []model.VolumeMount{volumeMount}
-	creds := model.Credentials{URI: ""}
+	creds := model.Credentials{}
 	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
 	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
 	if err != nil {

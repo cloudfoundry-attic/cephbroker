@@ -130,6 +130,8 @@ func (c *cephClient) GetConfigDetails(lager.Logger) (string, string, error) {
 
 func (c *cephClient) invokeCeph(logger lager.Logger, args []string) error {
 	cmd := "ceph-fuse"
+	logger.Info("invoking-ceph", lager.Data{"cmd": cmd, "args": args})
+	defer logger.Debug("done-invoking-ceph")
 	return c.invoker.Invoke(logger, cmd, args)
 }
 
@@ -202,6 +204,7 @@ func (r *realInvoker) Invoke(logger lager.Logger, executable string, cmdArgs []s
 	}
 
 	if err = cmdHandle.Wait(); err != nil {
+
 		logger.Error("command-exited", err)
 		return err
 	}
