@@ -209,7 +209,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
 			Expect(bindingResponse.VolumeMounts[0].ContainerPath).To(Equal("/some-user-specified-path"))
 			Expect(bindingResponse.VolumeMounts[0].Private).ToNot(BeNil())
-			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephfs"))
+			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephdriver"))
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).ToNot(BeNil())
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some-mds"))
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some keyring content"))

@@ -174,7 +174,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
 	}
-	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephfs", GroupId: serviceInstanceId, Config: string(config)}
+	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephdriver", GroupId: serviceInstanceId, Config: string(config)}
 
 	volumeMount := model.VolumeMount{ContainerPath: containerMountPath, Mode: "rw", Private: privateDetails}
 	volumeMounts := []model.VolumeMount{volumeMount}
