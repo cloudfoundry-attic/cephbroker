@@ -40,6 +40,6 @@ type VolumeMountPrivateDetails struct {
 type CephConfig struct {
 	IP               string `json:"ip"`
 	Keyring          string `json:"keyring"`
-	RemoteMountPoint string `json:"remotemountpoint"`
-	LocalMountPoint  string `json:"localmountpoint"`
+	RemoteMountPoint string `json:"remote_mount_point"`
+	LocalMountPoint  string `json:"local_mount_point"`
 }
