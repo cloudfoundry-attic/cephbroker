@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"encoding/json"
+
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/pivotal-golang/lager"
@@ -162,17 +163,20 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	c.bindingMap[bindingId] = &bindingInfo
 	remoteSharePath, localMountPoint, err := c.cephClient.GetPathsForShare(logger, serviceInstanceId)
 	if err != nil {
+		logger.Error("failed-getting-paths-for-share", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
 	containerMountPath := determineContainerMountPath(bindingInfo.Parameters, serviceInstanceId)
 	mds, keyring, err := c.cephClient.GetConfigDetails(logger)
 	if err != nil {
+		logger.Error("failed-to-determine-container-mountpath", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
 
 	cephConfig := model.CephConfig{IP: mds, Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
 	config, err := json.Marshal(cephConfig)
 	if err != nil {
+		logger.Error("failed-to-marshal-cephconfig", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
 	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephdriver", GroupId: serviceInstanceId, Config: string(config)}
@@ -183,6 +187,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
 	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
 	if err != nil {
+		logger.Error("failed-to-service-bindings-json", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
 	return createBindingResponse, nil

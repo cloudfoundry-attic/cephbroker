@@ -1,6 +1,7 @@
 package cephbrokerlocal
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -86,6 +87,7 @@ func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string,
 	logger.Info("start")
 	defer logger.Info("end")
 	logger.Info("share-name", lager.Data{shareName: shareName})
+
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
 	err := c.systemUtil.MkdirAll(sharePath, os.ModePerm)
 	if err != nil {
@@ -110,18 +112,21 @@ func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 }
 
 func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (string, string, error) {
-	logger = logger.Session("get-path-for-share")
+	logger = logger.Session("get-paths-for-share", lager.Data{shareName: shareName})
 	logger.Info("start")
 	defer logger.Info("end")
-	logger.Info("share-name", lager.Data{shareName: shareName})
-	shareAbsPath := filepath.Join(c.remoteMountPath, shareName)
-	exists := c.systemUtil.Exists(shareAbsPath)
+
+	shareLocalPath := filepath.Join(c.baseLocalMountPoint, shareName)
+	exists := c.systemUtil.Exists(shareLocalPath)
 	if exists == false {
-		return "", "", fmt.Errorf("share not found, internal error")
+		return "", "", errors.New("share not found, internal error")
 	}
+
+	shareAbsPath := filepath.Join(c.remoteMountPath, shareName)
 	cellPath := filepath.Join(CellBasePath, shareName)
 	return shareAbsPath, cellPath, nil
 }
+
 func (c *cephClient) GetConfigDetails(lager.Logger) (string, string, error) {
 	if c.mds == "" || c.keyring == "" {
 		return "", "", fmt.Errorf("Error retreiving Ceph config details")
