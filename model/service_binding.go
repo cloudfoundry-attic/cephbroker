@@ -32,13 +32,14 @@ type VolumeMount struct {
 }
 
 type VolumeMountPrivateDetails struct {
-	Driver  string     `json:"driver"`
-	GroupId string     `json:"group_id"`
-	Config  string     `json:"config"`
+	Driver  string `json:"driver"`
+	GroupId string `json:"group_id"`
+	Config  string `json:"config"`
 }
 
 type CephConfig struct {
-	MDS              string `json:"mds"`
+	IP               string `json:"ip"`
 	Keyring          string `json:"keyring"`
-	RemoteMountPoint string `json:"remote_mountpoint"`
+	RemoteMountPoint string `json:"remotemountpoint"`
+	LocalMountPoint  string `json:"localmountpoint"`
 }
