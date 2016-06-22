@@ -16,7 +16,7 @@ type Client interface {
 	MountFileSystem(lager.Logger, string) (string, error)
 	CreateShare(lager.Logger, string) (string, error)
 	DeleteShare(lager.Logger, string) error
-	GetPathForShare(lager.Logger, string) (string, error)
+	GetPathsForShare(lager.Logger, string) (string, string, error)
 	GetConfigDetails(lager.Logger) (string, string, error)
 }
 
@@ -27,7 +27,10 @@ type cephClient struct {
 	baseLocalMountPoint string
 	mounted             bool
 	keyring             string
+	remoteMountPath     string
 }
+
+const CellBasePath string = "/var/vcap/data/volumes/"
 
 func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil SystemUtil, localMountPoint string, keyringFile string) Client {
 	return &cephClient{
@@ -39,7 +42,7 @@ func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSy
 		keyring:             keyringFile,
 	}
 }
-func NewCephClient(mds string, localMountPoint string, keyringFile string) Client {
+func NewCephClient(mds string, localMountPoint string, keyringFile string, remoteMountPath string) Client {
 	return &cephClient{
 		mds:                 mds,
 		invoker:             NewRealInvoker(),
@@ -47,6 +50,7 @@ func NewCephClient(mds string, localMountPoint string, keyringFile string) Clien
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
 		keyring:             keyringFile,
+		remoteMountPath:     remoteMountPath,
 	}
 }
 func (c *cephClient) IsFilesystemMounted(logger lager.Logger) bool {
@@ -105,17 +109,18 @@ func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	return nil
 }
 
-func (c *cephClient) GetPathForShare(logger lager.Logger, shareName string) (string, error) {
+func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (string, string, error) {
 	logger = logger.Session("get-path-for-share")
 	logger.Info("start")
 	defer logger.Info("end")
 	logger.Info("share-name", lager.Data{shareName: shareName})
-	shareAbsPath := filepath.Join(c.baseLocalMountPoint, shareName)
+	shareAbsPath := filepath.Join(c.remoteMountPath, shareName)
 	exists := c.systemUtil.Exists(shareAbsPath)
 	if exists == false {
-		return "", fmt.Errorf("share not found, internal error")
+		return "", "", fmt.Errorf("share not found, internal error")
 	}
-	return shareAbsPath, nil
+	cellPath := filepath.Join(CellBasePath, shareName)
+	return shareAbsPath, cellPath, nil
 }
 func (c *cephClient) GetConfigDetails(lager.Logger) (string, string, error) {
 	if c.mds == "" || c.keyring == "" {

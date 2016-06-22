@@ -44,6 +44,11 @@ var defaultMountPath = flag.String(
 	"/tmp/share",
 	"local directory to mount within",
 )
+var defaultRemoteMountPath = flag.String(
+	"defaultRemoteMountPath",
+	"/",
+	"local directory to mount within",
+)
 
 func main() {
 	parseCommandLine()
@@ -82,7 +87,7 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 }
 
 func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Members, error) {
-	cephClient := cephbrokerlocal.NewCephClient(*mds, *defaultMountPath, *keyringFile)
+	cephClient := cephbrokerlocal.NewCephClient(*mds, *defaultMountPath, *keyringFile, *defaultRemoteMountPath)
 	existingServiceInstances, err := loadServiceInstances()
 	if err != nil {
 		return nil, err

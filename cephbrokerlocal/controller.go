@@ -5,10 +5,10 @@ import (
 	"path"
 	"reflect"
 
+	"encoding/json"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/pivotal-golang/lager"
-	"encoding/json"
 )
 
 const (
@@ -160,7 +160,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	logger.Info("start")
 	defer logger.Info("end")
 	c.bindingMap[bindingId] = &bindingInfo
-	sharePath, err := c.cephClient.GetPathForShare(logger, serviceInstanceId)
+	remoteSharePath, localMountPoint, err := c.cephClient.GetPathsForShare(logger, serviceInstanceId)
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
 	}
@@ -169,7 +169,8 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
 	}
-	cephConfig := model.CephConfig{MDS: mds, Keyring: keyring, RemoteMountPoint: sharePath}
+
+	cephConfig := model.CephConfig{IP: mds, Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
 	config, err := json.Marshal(cephConfig)
 	if err != nil {
 		return model.CreateServiceBindingResponse{}, err
