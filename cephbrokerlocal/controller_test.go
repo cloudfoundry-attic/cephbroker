@@ -34,7 +34,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 		serviceGuid = "some-service-guid"
 		fakeSystemUtil = new(cephfakes.FakeSystemUtil)
 		localMountPoint = "/tmp/share"
-		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds", fakeInvoker, fakeSystemUtil, localMountPoint, "/some-keyring-file")
+		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds-url:9999", fakeInvoker, fakeSystemUtil, localMountPoint, "/some-keyring-file")
 		instanceMap = make(map[string]*model.ServiceInstance)
 		bindingMap = make(map[string]*model.ServiceBinding)
 		controller = NewController(cephClient, "/tmp/cephbroker", instanceMap, bindingMap)
@@ -212,6 +212,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephdriver"))
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).ToNot(BeNil())
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some-mds"))
+			Expect(bindingResponse.VolumeMounts[0].Private.Config).NotTo(ContainSubstring("9999"))
 			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some keyring content"))
 		})
 		Context("should fail", func() {

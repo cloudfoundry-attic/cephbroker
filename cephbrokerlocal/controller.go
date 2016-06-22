@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"strings"
 
 	"encoding/json"
 
@@ -173,7 +174,8 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 		return model.CreateServiceBindingResponse{}, err
 	}
 
-	cephConfig := model.CephConfig{IP: mds, Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
+	mdsParts := strings.Split(mds, ":")
+	cephConfig := model.CephConfig{IP: mdsParts[0], Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
 	config, err := json.Marshal(cephConfig)
 	if err != nil {
 		logger.Error("failed-to-marshal-cephconfig", err)
