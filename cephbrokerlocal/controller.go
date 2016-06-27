@@ -38,10 +38,19 @@ type cephController struct {
 	instanceMap map[string]*model.ServiceInstance
 	bindingMap  map[string]*model.ServiceBinding
 	configPath  string
+	serviceName string
+	serviceId   string
 }
 
-func NewController(cephClient Client, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) Controller {
-	return &cephController{cephClient: cephClient, configPath: configPath, instanceMap: instanceMap, bindingMap: bindingMap}
+func NewController(cephClient Client, serviceName, serviceId, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) Controller {
+	return &cephController{
+		cephClient:  cephClient,
+		serviceName: serviceName,
+		serviceId:   serviceId,
+		configPath:  configPath,
+		instanceMap: instanceMap,
+		bindingMap:  bindingMap,
+	}
 }
 
 func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) {
@@ -57,8 +66,8 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 	}
 
 	service := model.Service{
-		Name:            "cephfs",
-		Id:              "cephfs-service-guid",
+		Name:            c.serviceName,
+		Id:              c.serviceId,
 		Description:     "Provides the Ceph FS volume service, including volume creation and volume mounts",
 		Bindable:        true,
 		PlanUpdateable:  false,

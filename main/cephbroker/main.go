@@ -39,6 +39,16 @@ var configPath = flag.String(
 	"/tmp/cephbroker",
 	"config directory to store book-keeping info",
 )
+var serviceName = flag.String(
+	"serviceName",
+	"cephfs",
+	"name of the service to register with cloud controller",
+)
+var serviceId = flag.String(
+	"serviceId",
+	"cephfs-service-guid",
+	"ID of the service to register with cloud controller",
+)
 var defaultMountPath = flag.String(
 	"defaultMountPath",
 	"/tmp/share",
@@ -96,7 +106,7 @@ func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Memb
 	if err != nil {
 		return nil, err
 	}
-	controller := cephbrokerlocal.NewController(cephClient, *configPath, existingServiceInstances, existingServiceBindings)
+	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *configPath, existingServiceInstances, existingServiceBindings)
 	handler, err := cephbrokerhttp.NewHandler(logger, controller)
 	exitOnFailure(logger, err)
 

@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"errors"
+
+	"fmt"
+
 	"github.com/cloudfoundry-incubator/cephbroker"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
@@ -33,6 +36,7 @@ func newCatalogHandler(logger lager.Logger, controller cephbrokerlocal.Controlle
 	return func(w http.ResponseWriter, req *http.Request) {
 		logger := logger.Session("catalog")
 		logger.Info("start")
+		logger.Info(fmt.Sprintf("---> Request %#v", req))
 		defer logger.Info("end")
 
 		catalog, err := controller.GetCatalog(logger)
