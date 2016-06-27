@@ -40,13 +40,19 @@ type cephController struct {
 	configPath  string
 	serviceName string
 	serviceId   string
+	planId      string
+	planName    string
+	planDesc    string
 }
 
-func NewController(cephClient Client, serviceName, serviceId, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) Controller {
+func NewController(cephClient Client, serviceName, serviceId, planId, planName, planDesc, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) Controller {
 	return &cephController{
 		cephClient:  cephClient,
 		serviceName: serviceName,
 		serviceId:   serviceId,
+		planId:      planId,
+		planName:    planName,
+		planDesc:    planDesc,
 		configPath:  configPath,
 		instanceMap: instanceMap,
 		bindingMap:  bindingMap,
@@ -58,9 +64,9 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 	logger.Info("start")
 	defer logger.Info("end")
 	plan := model.ServicePlan{
-		Name:        "free",
-		Id:          "free-plan-guid",
-		Description: "free ceph filesystem",
+		Name:        c.planName, // "free"
+		Id:          c.planId,   // "free-plan-guid"
+		Description: c.planDesc, // "free ceph filesystem"
 		Metadata:    nil,
 		Free:        true,
 	}
