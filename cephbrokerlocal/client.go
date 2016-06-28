@@ -33,6 +33,11 @@ type cephClient struct {
 
 const CellBasePath string = "/var/vcap/data/volumes/"
 
+var (
+	ShareNotFound   error = errors.New("share not found, internal error")
+	KeyringNotFound error = errors.New("unable to open cephfs keyring")
+)
+
 func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil SystemUtil, localMountPoint string, keyringFile string) Client {
 	return &cephClient{
 		mds:                 mds,
@@ -62,13 +67,13 @@ func (c *cephClient) IsFilesystemMounted(logger lager.Logger) bool {
 }
 
 func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint string) (string, error) {
-	logger = logger.Session("mount-filesystem")
+	logger = logger.Session("mount-filesystem", lager.Data{"remoteMountPoint": remoteMountPoint})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	err := c.systemUtil.MkdirAll(c.baseLocalMountPoint, os.ModePerm)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create local directory '%s', mount filesystem failed", c.baseLocalMountPoint), err)
+		logger.Error("failed-to-create-local-dir", err)
 		return "", fmt.Errorf("failed to create local directory '%s', mount filesystem failed", c.baseLocalMountPoint)
 	}
 
@@ -83,29 +88,28 @@ func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 }
 
 func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string, error) {
-	logger = logger.Session("create-share")
+	logger = logger.Session("create-share", lager.Data{"shareName": shareName})
 	logger.Info("start")
 	defer logger.Info("end")
-	logger.Info("share-name", lager.Data{shareName: shareName})
 
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
 	err := c.systemUtil.MkdirAll(sharePath, os.ModePerm)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create share '%s'", sharePath), err)
+		logger.Error("failed-to-create-share", err)
 		return "", fmt.Errorf("failed to create share '%s'", sharePath)
 	}
 	return sharePath, nil
 }
 
 func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
-	logger = logger.Session("delete-share")
+	logger = logger.Session("delete-share", lager.Data{"shareName": shareName})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
 	err := c.systemUtil.Remove(sharePath)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to delete share '%s'", sharePath), err)
+		logger.Error("failed-to-delete-share", err)
 		return fmt.Errorf("failed to delete share '%s'", sharePath)
 	}
 	return nil
@@ -119,7 +123,8 @@ func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (st
 	shareLocalPath := filepath.Join(c.baseLocalMountPoint, shareName)
 	exists := c.systemUtil.Exists(shareLocalPath)
 	if exists == false {
-		return "", "", errors.New("share not found, internal error")
+		logger.Error("share-not-found", ShareNotFound)
+		return "", "", ShareNotFound
 	}
 
 	shareAbsPath := filepath.Join(c.remoteMountPath, shareName)
@@ -127,13 +132,14 @@ func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (st
 	return shareAbsPath, cellPath, nil
 }
 
-func (c *cephClient) GetConfigDetails(lager.Logger) (string, string, error) {
+func (c *cephClient) GetConfigDetails(logger lager.Logger) (string, string, error) {
 	if c.mds == "" || c.keyring == "" {
 		return "", "", fmt.Errorf("Error retreiving Ceph config details")
 	}
 	contents, err := c.systemUtil.ReadFile(c.keyring)
 	if err != nil {
-		return "", "", fmt.Errorf("Error retreiving Ceph keyring")
+		logger.Error("failed-to-get-keyring", KeyringNotFound)
+		return "", "", KeyringNotFound
 	}
 	return c.mds, string(contents), nil
 }
@@ -204,12 +210,12 @@ func (r *realInvoker) Invoke(logger lager.Logger, executable string, cmdArgs []s
 
 	_, err := cmdHandle.StdoutPipe()
 	if err != nil {
-		logger.Error("unable to get stdout", err)
+		logger.Error("unable-to-get-stdout", err)
 		return err
 	}
 
 	if err = cmdHandle.Start(); err != nil {
-		logger.Error("starting command", err)
+		logger.Error("starting-command", err)
 		return err
 	}
 
