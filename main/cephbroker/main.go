@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"syscall"
+
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerhttp"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
@@ -80,6 +82,8 @@ func main() {
 	parseCommandLine()
 	withLogger, logTap := logger()
 	defer withLogger.Info("ends")
+
+	syscall.Umask(000)
 
 	servers, err := createCephBrokerServer(withLogger, *atAddress)
 
