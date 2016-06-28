@@ -175,7 +175,7 @@ func (f *realSystemUtil) WriteFile(filename string, data []byte, perm os.FileMod
 }
 
 func (f *realSystemUtil) Remove(path string) error {
-	return os.Remove(path)
+	return os.RemoveAll(path)
 }
 func (f *realSystemUtil) Exists(path string) bool {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
