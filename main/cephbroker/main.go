@@ -13,7 +13,7 @@ import (
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	cf_debug_server "github.com/cloudfoundry-incubator/cf-debug-server"
-	cf_lager "github.com/cloudfoundry-incubator/cf-lager"
+	cf_lager "code.cloudfoundry.org/cflager"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
