@@ -74,7 +74,7 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 	service := model.Service{
 		Name:            c.serviceName,
 		Id:              c.serviceId,
-		Description:     "Provides the Ceph FS volume service, including volume creation and volume mounts",
+		Description:     "CephFS service docs: https://github.com/cloudfoundry-incubator/cephfs-bosh-release/",
 		Bindable:        true,
 		PlanUpdateable:  false,
 		Tags:            []string{"ceph"},

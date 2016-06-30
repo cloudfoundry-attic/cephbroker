@@ -67,15 +67,15 @@ var planDesc = flag.String(
 	"description of the service plan to register with cloud controller",
 )
 
-var defaultMountPath = flag.String(
-	"defaultMountPath",
+var baseMountPath = flag.String(
+	"baseMountPath",
 	"/tmp/share",
-	"local directory to mount within",
+	"local directory to mount within on the service broker host",
 )
-var defaultRemoteMountPath = flag.String(
-	"defaultRemoteMountPath",
+var baseRemoteMountPath = flag.String(
+	"baseRemoteMountPath",
 	"/",
-	"local directory to mount within",
+	"directory to mount on ceph file system server",
 )
 
 func main() {
@@ -117,7 +117,7 @@ func processRunnerFor(servers grouper.Members) ifrit.Runner {
 }
 
 func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Members, error) {
-	cephClient := cephbrokerlocal.NewCephClient(*mds, *defaultMountPath, *keyringFile, *defaultRemoteMountPath)
+	cephClient := cephbrokerlocal.NewCephClient(*mds, *baseMountPath, *keyringFile, *baseRemoteMountPath)
 	existingServiceInstances, err := loadServiceInstances()
 	if err != nil {
 		return nil, err
