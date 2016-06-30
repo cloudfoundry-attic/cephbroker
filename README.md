@@ -91,6 +91,13 @@ cf restage <your application name>
 ```
 This will mount your volume to `<container path>` for your application to use.
 
+Multitenancy
+============
+
+The ceph broker allows multiple service instances to be created for a single broker/filesystem pair.  We do this by allocating a GUID for each service instance, and creating a subdirectory of the `baseRemoteMountPoint` to store content for each instance.  The driver then uses that subdirectory as the remote mount point when it mounts the volume into the cell.
+
+We persist state information for the services using the volume in a file on the `configPath`. 
+
 License
 =======
 cephbroker is licensed under the [Apache 2.0 OSS license](https://github.com/cloudfoundry-incubator/cephbroker/LICENSE).
