@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeController struct {

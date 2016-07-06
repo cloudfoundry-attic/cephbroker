@@ -9,7 +9,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type Client interface {

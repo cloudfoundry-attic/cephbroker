@@ -9,8 +9,8 @@ import (
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal/cephfakes"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

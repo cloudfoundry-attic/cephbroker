@@ -10,11 +10,11 @@ import (
 
 	cf_lager "code.cloudfoundry.org/cflager"
 	cf_debug_server "code.cloudfoundry.org/debugserver"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerhttp"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
