@@ -6,7 +6,7 @@ import (
 	"path"
 
 	. "github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
-	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal/cephfakes"
+	"github.com/cloudfoundry-incubator/cephbroker/cephfakes"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
 	"code.cloudfoundry.org/lager"
@@ -14,7 +14,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
+
+const AN_ERROR = "An Error"
 
 var _ = Describe("Cephbrokerlocal", func() {
 	var (
@@ -43,7 +46,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds-url:9999", fakeInvoker, fakeSystemUtil, localMountPoint, "/some-keyring-file")
 		instanceMap = make(map[string]*model.ServiceInstance)
 		bindingMap = make(map[string]*model.ServiceBinding)
-		controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/tmp/cephbroker", instanceMap, bindingMap)
+		controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/tmp/cephbroker", instanceMap, bindingMap, fakeSystemUtil)
 
 	})
 	Context(".Catalog", func() {
@@ -70,6 +73,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(catalog.Services[0].PlanUpdateable).To(Equal(false))
 		})
 	})
+	DONT_CARE_ERROR := "An Error"
 	Context(".CreateServiceInstance", func() {
 		var (
 			instance model.ServiceInstance
@@ -110,10 +114,18 @@ var _ = Describe("Cephbrokerlocal", func() {
 				Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create share '%s'", path.Join(localMountPoint, "service-instance-guid"))))
 			})
 			It("should error when updating internal bookkeeping fails", func() {
-				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap)
+				const BAD_PATH = "/non-existent-path"
+				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, BAD_PATH, instanceMap, bindingMap, fakeSystemUtil)
+				fakeSystemUtil.MkdirAllStub = func(path string, _ os.FileMode) error {
+					if path == BAD_PATH {
+  					return fmt.Errorf(DONT_CARE_ERROR)
+					}
+					return nil
+				}
+
 				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_instances.json: no such file or directory")))
+				Expect(err.Error()).To(Equal(fmt.Sprintf(DONT_CARE_ERROR)))
 			})
 
 		})
@@ -191,10 +203,11 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to delete share '%s'", path.Join(localMountPoint, serviceGuid))))
 		})
 		It("should error when updating internal bookkeeping fails", func() {
-			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap)
+			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
+			fakeSystemUtil.MkdirAllReturns(fmt.Errorf(AN_ERROR))
 			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_instances.json: no such file or directory")))
+			Expect(err.Error()).To(Equal(fmt.Sprintf(AN_ERROR)))
 		})
 
 	})
@@ -234,11 +247,12 @@ var _ = Describe("Cephbrokerlocal", func() {
 				Expect(err.Error()).To(Equal("share not found, internal error"))
 			})
 			It("when updating internal bookkeeping fails", func() {
-				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap)
+				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
+				fakeSystemUtil.MkdirAllReturns(fmt.Errorf(DONT_CARE_ERROR))
 				fakeSystemUtil.ExistsReturns(true)
 				_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(fmt.Sprintf("open /non-existent-path/service_bindings.json: no such file or directory")))
+				Expect(err.Error()).To(Equal(fmt.Sprintf(DONT_CARE_ERROR)))
 			})
 		})
 	})
@@ -318,10 +332,11 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(exists).To(Equal(false))
 		})
 		It("when updating internal bookkeeping fails", func() {
-			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap)
+			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
+			fakeSystemUtil.MkdirAllReturns(fmt.Errorf(AN_ERROR))
 			err := controller.UnbindServiceInstance(testLogger, serviceGuid, bindingId)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("open /non-existent-path/service_bindings.json: no such file or directory"))
+			Expect(err.Error()).To(Equal(AN_ERROR))
 		})
 	})
 
@@ -377,7 +392,7 @@ func successfullServiceInstanceCreate(testLogger lager.Logger, fakeSystemUtil *c
 	createResponse, err := controller.CreateServiceInstance(testLogger, serviceGuid, instance)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(createResponse.DashboardUrl).ToNot(Equal(""))
-	Expect(fakeSystemUtil.MkdirAllCallCount()).To(Equal(2))
+	Expect(fakeSystemUtil.MkdirAllCallCount()).To(Equal(3))
 }
 
 func successfullServiceBindingCreate(testLogger lager.Logger, fakeSystemUtil *cephfakes.FakeSystemUtil, binding model.ServiceBinding, controller Controller, serviceGuid string, bindingId string) {

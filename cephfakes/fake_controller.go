@@ -4,9 +4,9 @@ package cephfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"github.com/cloudfoundry-incubator/cephbroker/model"
-	"code.cloudfoundry.org/lager"
 )
 
 type FakeController struct {
@@ -112,7 +112,6 @@ type FakeController struct {
 	unbindServiceInstanceReturns struct {
 		result1 error
 	}
-	invocations map[string][][]interface{}
 }
 
 func (fake *FakeController) GetCatalog(logger lager.Logger) (model.Catalog, error) {
@@ -120,8 +119,6 @@ func (fake *FakeController) GetCatalog(logger lager.Logger) (model.Catalog, erro
 	fake.getCatalogArgsForCall = append(fake.getCatalogArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.guard("GetCatalog")
-	fake.invocations["GetCatalog"] = append(fake.invocations["GetCatalog"], []interface{}{logger})
 	fake.getCatalogMutex.Unlock()
 	if fake.GetCatalogStub != nil {
 		return fake.GetCatalogStub(logger)
@@ -157,8 +154,6 @@ func (fake *FakeController) CreateServiceInstance(logger lager.Logger, serverIns
 		serverInstanceId string
 		instance         model.ServiceInstance
 	}{logger, serverInstanceId, instance})
-	fake.guard("CreateServiceInstance")
-	fake.invocations["CreateServiceInstance"] = append(fake.invocations["CreateServiceInstance"], []interface{}{logger, serverInstanceId, instance})
 	fake.createServiceInstanceMutex.Unlock()
 	if fake.CreateServiceInstanceStub != nil {
 		return fake.CreateServiceInstanceStub(logger, serverInstanceId, instance)
@@ -193,8 +188,6 @@ func (fake *FakeController) ServiceInstanceExists(logger lager.Logger, serviceIn
 		logger            lager.Logger
 		serviceInstanceId string
 	}{logger, serviceInstanceId})
-	fake.guard("ServiceInstanceExists")
-	fake.invocations["ServiceInstanceExists"] = append(fake.invocations["ServiceInstanceExists"], []interface{}{logger, serviceInstanceId})
 	fake.serviceInstanceExistsMutex.Unlock()
 	if fake.ServiceInstanceExistsStub != nil {
 		return fake.ServiceInstanceExistsStub(logger, serviceInstanceId)
@@ -229,8 +222,6 @@ func (fake *FakeController) ServiceInstancePropertiesMatch(logger lager.Logger, 
 		serviceInstanceId string
 		instance          model.ServiceInstance
 	}{logger, serviceInstanceId, instance})
-	fake.guard("ServiceInstancePropertiesMatch")
-	fake.invocations["ServiceInstancePropertiesMatch"] = append(fake.invocations["ServiceInstancePropertiesMatch"], []interface{}{logger, serviceInstanceId, instance})
 	fake.serviceInstancePropertiesMatchMutex.Unlock()
 	if fake.ServiceInstancePropertiesMatchStub != nil {
 		return fake.ServiceInstancePropertiesMatchStub(logger, serviceInstanceId, instance)
@@ -264,8 +255,6 @@ func (fake *FakeController) DeleteServiceInstance(logger lager.Logger, serviceIn
 		logger            lager.Logger
 		serviceInstanceId string
 	}{logger, serviceInstanceId})
-	fake.guard("DeleteServiceInstance")
-	fake.invocations["DeleteServiceInstance"] = append(fake.invocations["DeleteServiceInstance"], []interface{}{logger, serviceInstanceId})
 	fake.deleteServiceInstanceMutex.Unlock()
 	if fake.DeleteServiceInstanceStub != nil {
 		return fake.DeleteServiceInstanceStub(logger, serviceInstanceId)
@@ -301,8 +290,6 @@ func (fake *FakeController) BindServiceInstance(logger lager.Logger, serverInsta
 		bindingId        string
 		bindingInfo      model.ServiceBinding
 	}{logger, serverInstanceId, bindingId, bindingInfo})
-	fake.guard("BindServiceInstance")
-	fake.invocations["BindServiceInstance"] = append(fake.invocations["BindServiceInstance"], []interface{}{logger, serverInstanceId, bindingId, bindingInfo})
 	fake.bindServiceInstanceMutex.Unlock()
 	if fake.BindServiceInstanceStub != nil {
 		return fake.BindServiceInstanceStub(logger, serverInstanceId, bindingId, bindingInfo)
@@ -338,8 +325,6 @@ func (fake *FakeController) ServiceBindingExists(logger lager.Logger, serviceIns
 		serviceInstanceId string
 		bindingId         string
 	}{logger, serviceInstanceId, bindingId})
-	fake.guard("ServiceBindingExists")
-	fake.invocations["ServiceBindingExists"] = append(fake.invocations["ServiceBindingExists"], []interface{}{logger, serviceInstanceId, bindingId})
 	fake.serviceBindingExistsMutex.Unlock()
 	if fake.ServiceBindingExistsStub != nil {
 		return fake.ServiceBindingExistsStub(logger, serviceInstanceId, bindingId)
@@ -375,8 +360,6 @@ func (fake *FakeController) ServiceBindingPropertiesMatch(logger lager.Logger, s
 		bindingId         string
 		binding           model.ServiceBinding
 	}{logger, serviceInstanceId, bindingId, binding})
-	fake.guard("ServiceBindingPropertiesMatch")
-	fake.invocations["ServiceBindingPropertiesMatch"] = append(fake.invocations["ServiceBindingPropertiesMatch"], []interface{}{logger, serviceInstanceId, bindingId, binding})
 	fake.serviceBindingPropertiesMatchMutex.Unlock()
 	if fake.ServiceBindingPropertiesMatchStub != nil {
 		return fake.ServiceBindingPropertiesMatchStub(logger, serviceInstanceId, bindingId, binding)
@@ -411,8 +394,6 @@ func (fake *FakeController) GetBinding(logger lager.Logger, serviceInstanceId st
 		serviceInstanceId string
 		bindingId         string
 	}{logger, serviceInstanceId, bindingId})
-	fake.guard("GetBinding")
-	fake.invocations["GetBinding"] = append(fake.invocations["GetBinding"], []interface{}{logger, serviceInstanceId, bindingId})
 	fake.getBindingMutex.Unlock()
 	if fake.GetBindingStub != nil {
 		return fake.GetBindingStub(logger, serviceInstanceId, bindingId)
@@ -448,8 +429,6 @@ func (fake *FakeController) UnbindServiceInstance(logger lager.Logger, serviceIn
 		serviceInstanceId string
 		bindingId         string
 	}{logger, serviceInstanceId, bindingId})
-	fake.guard("UnbindServiceInstance")
-	fake.invocations["UnbindServiceInstance"] = append(fake.invocations["UnbindServiceInstance"], []interface{}{logger, serviceInstanceId, bindingId})
 	fake.unbindServiceInstanceMutex.Unlock()
 	if fake.UnbindServiceInstanceStub != nil {
 		return fake.UnbindServiceInstanceStub(logger, serviceInstanceId, bindingId)
@@ -475,19 +454,6 @@ func (fake *FakeController) UnbindServiceInstanceReturns(result1 error) {
 	fake.unbindServiceInstanceReturns = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeController) Invocations() map[string][][]interface{} {
-	return fake.invocations
-}
-
-func (fake *FakeController) guard(key string) {
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
 }
 
 var _ cephbrokerlocal.Controller = new(FakeController)

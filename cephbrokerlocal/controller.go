@@ -18,7 +18,7 @@ const (
 	DEFAULT_CONTAINER_PATH           = "/var/vcap/data/"
 )
 
-//go:generate counterfeiter -o ./cephfakes/fake_controller.go . Controller
+//go:generate counterfeiter -o ../cephfakes/fake_controller.go . Controller
 
 type Controller interface {
 	GetCatalog(logger lager.Logger) (model.Catalog, error)
@@ -43,9 +43,10 @@ type cephController struct {
 	planId      string
 	planName    string
 	planDesc    string
+	sysUtil 		utils.SystemUtil
 }
 
-func NewController(cephClient Client, serviceName, serviceId, planId, planName, planDesc, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding) Controller {
+func NewController(cephClient Client, serviceName, serviceId, planId, planName, planDesc, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding, sysUtil utils.SystemUtil) Controller {
 	return &cephController{
 		cephClient:  cephClient,
 		serviceName: serviceName,
@@ -56,6 +57,7 @@ func NewController(cephClient Client, serviceName, serviceId, planId, planName, 
 		configPath:  configPath,
 		instanceMap: instanceMap,
 		bindingMap:  bindingMap,
+		sysUtil:		sysUtil,
 	}
 }
 
@@ -114,7 +116,7 @@ func (c *cephController) CreateServiceInstance(logger lager.Logger, serviceInsta
 	}
 
 	c.instanceMap[serviceInstanceId] = &instance
-	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json")
+	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.sysUtil)
 	if err != nil {
 		return model.CreateServiceInstanceResponse{}, err
 	}
@@ -166,7 +168,7 @@ func (c *cephController) DeleteServiceInstance(logger lager.Logger, serviceInsta
 		return err
 	}
 	delete(c.instanceMap, serviceInstanceId)
-	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json")
+	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.sysUtil)
 	if err != nil {
 		return err
 	}
@@ -202,9 +204,9 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	volumeMounts := []model.VolumeMount{volumeMount}
 	creds := model.Credentials{}
 	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
-	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
+	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.sysUtil)
 	if err != nil {
-		logger.Error("failed-to-service-bindings-json", err)
+		logger.Error("failed-to-json-marshal-service-bindings", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
 	return createBindingResponse, nil
@@ -249,7 +251,7 @@ func (c *cephController) UnbindServiceInstance(logger lager.Logger, serviceInsta
 	logger.Info("start")
 	defer logger.Info("end")
 	delete(c.bindingMap, bindingId)
-	err := utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json")
+	err := utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.sysUtil)
 	if err != nil {
 		logger.Error("error-unbind", err)
 		return err

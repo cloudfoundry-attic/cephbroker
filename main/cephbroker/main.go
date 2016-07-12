@@ -126,7 +126,7 @@ func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Memb
 	if err != nil {
 		return nil, err
 	}
-	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *planId, *planName, *planDesc, *configPath, existingServiceInstances, existingServiceBindings)
+	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *planId, *planName, *planDesc, *configPath, existingServiceInstances, existingServiceBindings, utils.NewRealSystemUtil())
 	handler, err := cephbrokerhttp.NewHandler(logger, controller)
 	exitOnFailure(logger, err)
 
@@ -150,7 +150,7 @@ func parseCommandLine() {
 func loadServiceInstances() (map[string]*model.ServiceInstance, error) {
 	var serviceInstancesMap map[string]*model.ServiceInstance
 
-	err := utils.ReadAndUnmarshal(&serviceInstancesMap, *configPath, "service_instances.json")
+	err := utils.ReadAndUnmarshal(&serviceInstancesMap, *configPath, "service_instances.json", utils.NewRealSystemUtil())
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("WARNING: service instance data file '%s' does not exist: \n", "service_instances.json")
@@ -165,7 +165,7 @@ func loadServiceInstances() (map[string]*model.ServiceInstance, error) {
 
 func loadServiceBindings() (map[string]*model.ServiceBinding, error) {
 	var bindingMap map[string]*model.ServiceBinding
-	err := utils.ReadAndUnmarshal(&bindingMap, *configPath, "service_bindings.json")
+	err := utils.ReadAndUnmarshal(&bindingMap, *configPath, "service_bindings.json", utils.NewRealSystemUtil())
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("WARNING: key map data file '%s' does not exist: \n", "service_bindings.json")

@@ -3,13 +3,12 @@ package cephbrokerlocal
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cephbroker/utils"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap"
-	"code.cloudfoundry.org/lager"
 )
 
 type Client interface {
@@ -24,7 +23,7 @@ type Client interface {
 type cephClient struct {
 	mds                 string
 	invoker             Invoker
-	systemUtil          SystemUtil
+	systemUtil          utils.SystemUtil
 	baseLocalMountPoint string
 	mounted             bool
 	keyring             string
@@ -38,7 +37,7 @@ var (
 	KeyringNotFound error = errors.New("unable to open cephfs keyring")
 )
 
-func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil SystemUtil, localMountPoint string, keyringFile string) Client {
+func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil utils.SystemUtil, localMountPoint string, keyringFile string) Client {
 	return &cephClient{
 		mds:                 mds,
 		invoker:             useInvoker,
@@ -52,7 +51,7 @@ func NewCephClient(mds string, localMountPoint string, keyringFile string, remot
 	return &cephClient{
 		mds:                 mds,
 		invoker:             NewRealInvoker(),
-		systemUtil:          NewRealSystemUtil(),
+		systemUtil:          utils.NewRealSystemUtil(),
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
 		keyring:             keyringFile,
@@ -151,43 +150,7 @@ func (c *cephClient) invokeCeph(logger lager.Logger, args []string) error {
 	return c.invoker.Invoke(logger, cmd, args)
 }
 
-//go:generate counterfeiter -o ./cephfakes/fake_system_util.go . SystemUtil
-
-type SystemUtil interface {
-	MkdirAll(path string, perm os.FileMode) error
-	WriteFile(filename string, data []byte, perm os.FileMode) error
-	Remove(string) error
-	Exists(path string) bool
-	ReadFile(path string) ([]byte, error)
-}
-type realSystemUtil struct{}
-
-func NewRealSystemUtil() SystemUtil {
-	return &realSystemUtil{}
-}
-
-func (f *realSystemUtil) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
-
-func (f *realSystemUtil) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
-}
-
-func (f *realSystemUtil) Remove(path string) error {
-	return os.RemoveAll(path)
-}
-func (f *realSystemUtil) Exists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-func (f *realSystemUtil) ReadFile(path string) ([]byte, error) {
-	return utils.ReadFile(path)
-}
-
-//go:generate counterfeiter -o ./cephfakes/fake_invoker.go . Invoker
+//go:generate counterfeiter -o ../cephfakes/fake_invoker.go . Invoker
 
 type Invoker interface {
 	Invoke(logger lager.Logger, executable string, args []string) error

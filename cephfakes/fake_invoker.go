@@ -4,8 +4,8 @@ package cephfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
 )
 
 type FakeInvoker struct {
@@ -19,23 +19,15 @@ type FakeInvoker struct {
 	invokeReturns struct {
 		result1 error
 	}
-	invocations map[string][][]interface{}
 }
 
 func (fake *FakeInvoker) Invoke(logger lager.Logger, executable string, args []string) error {
-	var argsCopy []string
-	if args != nil {
-		argsCopy = make([]string, len(args))
-		copy(argsCopy, args)
-	}
 	fake.invokeMutex.Lock()
 	fake.invokeArgsForCall = append(fake.invokeArgsForCall, struct {
 		logger     lager.Logger
 		executable string
 		args       []string
-	}{logger, executable, argsCopy})
-	fake.guard("Invoke")
-	fake.invocations["Invoke"] = append(fake.invocations["Invoke"], []interface{}{logger, executable, argsCopy})
+	}{logger, executable, args})
 	fake.invokeMutex.Unlock()
 	if fake.InvokeStub != nil {
 		return fake.InvokeStub(logger, executable, args)
@@ -61,19 +53,6 @@ func (fake *FakeInvoker) InvokeReturns(result1 error) {
 	fake.invokeReturns = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeInvoker) Invocations() map[string][][]interface{} {
-	return fake.invocations
-}
-
-func (fake *FakeInvoker) guard(key string) {
-	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
-	}
-	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
-	}
 }
 
 var _ cephbrokerlocal.Invoker = new(FakeInvoker)
