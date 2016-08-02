@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"path"
 
-	. "github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
-	"github.com/cloudfoundry-incubator/cephbroker/cephfakes"
-	"github.com/cloudfoundry-incubator/cephbroker/model"
+	. "code.cloudfoundry.org/cephbroker/cephbrokerlocal"
+	"code.cloudfoundry.org/cephbroker/cephfakes"
+	"code.cloudfoundry.org/cephbroker/model"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"

@@ -7,10 +7,10 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/cephbroker"
-	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerlocal"
-	"github.com/cloudfoundry-incubator/cephbroker/model"
-	"github.com/cloudfoundry-incubator/cephbroker/utils"
+	"code.cloudfoundry.org/cephbroker"
+	"code.cloudfoundry.org/cephbroker/cephbrokerlocal"
+	"code.cloudfoundry.org/cephbroker/model"
+	"code.cloudfoundry.org/cephbroker/utils"
 	cf_http_handlers "code.cloudfoundry.org/cfhttp/handlers"
 	"code.cloudfoundry.org/lager"
 	"github.com/tedsuo/rata"

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/cephbroker/utils"
+	"code.cloudfoundry.org/cephbroker/utils"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/cephbroker/utils"
+	"code.cloudfoundry.org/cephbroker/utils"
 )
 
 type FakeSystemUtil struct {

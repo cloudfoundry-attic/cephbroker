@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/cloudfoundry-incubator/cephbroker/cephbrokerhttp"
-	"github.com/cloudfoundry-incubator/cephbroker/cephfakes"
-	"github.com/cloudfoundry-incubator/cephbroker/model"
+	"code.cloudfoundry.org/cephbroker/cephbrokerhttp"
+	"code.cloudfoundry.org/cephbroker/cephfakes"
+	"code.cloudfoundry.org/cephbroker/model"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"code.cloudfoundry.org/lager"

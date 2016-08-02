@@ -8,8 +8,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/cloudfoundry-incubator/cephbroker/model"
-	"github.com/cloudfoundry-incubator/cephbroker/utils"
+	"code.cloudfoundry.org/cephbroker/model"
+	"code.cloudfoundry.org/cephbroker/utils"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -76,7 +76,7 @@ func (c *cephController) GetCatalog(logger lager.Logger) (model.Catalog, error) 
 	service := model.Service{
 		Name:            c.serviceName,
 		Id:              c.serviceId,
-		Description:     "CephFS service docs: https://github.com/cloudfoundry-incubator/cephfs-bosh-release/",
+		Description:     "CephFS service docs: https://code.cloudfoundry.org/cephfs-bosh-release/",
 		Bindable:        true,
 		PlanUpdateable:  false,
 		Tags:            []string{"ceph"},

@@ -12,7 +12,7 @@ Get Latest Executable: cephbroker
 Assuming you have a valid [Golang 1.6](https://golang.org/dl/) or [later](https://golang.org/dl/) installed for your system, you can quickly build and get the latest `go_service_broker` executable by running the following `go` command:
 
 ```
-$ go get github.com/cloudfoundry-incubator/cephbroker
+$ go get code.cloudfoundry.org/cephbroker
 ```
 
 This will build and place the `cephbroker` executable built for your operating system in your `$GOPATH/bin` directory.
