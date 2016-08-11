@@ -11,10 +11,10 @@ import (
 	"code.cloudfoundry.org/cephbroker/cephbrokerhttp"
 	"code.cloudfoundry.org/cephbroker/cephfakes"
 	"code.cloudfoundry.org/cephbroker/model"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Cephbroker Handlers", func() {

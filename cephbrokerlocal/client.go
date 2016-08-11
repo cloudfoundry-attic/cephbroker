@@ -6,8 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/cephbroker/utils"
+	"code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/os"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap"
 )
 
@@ -23,7 +25,8 @@ type Client interface {
 type cephClient struct {
 	mds                 string
 	invoker             Invoker
-	systemUtil          utils.SystemUtil
+	os                  osshim.Os
+	ioutil              ioutilshim.Ioutil
 	baseLocalMountPoint string
 	mounted             bool
 	keyring             string
@@ -37,11 +40,12 @@ var (
 	KeyringNotFound error = errors.New("unable to open cephfs keyring")
 )
 
-func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, useSystemUtil utils.SystemUtil, localMountPoint string, keyringFile string) Client {
+func NewCephClientWithInvokerAndSystemUtil(mds string, useInvoker Invoker, os osshim.Os, ioutil ioutilshim.Ioutil, localMountPoint string, keyringFile string) Client {
 	return &cephClient{
 		mds:                 mds,
 		invoker:             useInvoker,
-		systemUtil:          useSystemUtil,
+		os:                  os,
+		ioutil:              ioutil,
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
 		keyring:             keyringFile,
@@ -51,7 +55,8 @@ func NewCephClient(mds string, localMountPoint string, keyringFile string, remot
 	return &cephClient{
 		mds:                 mds,
 		invoker:             NewRealInvoker(),
-		systemUtil:          utils.NewRealSystemUtil(),
+		os:                  &osshim.OsShim{},
+		ioutil:              &ioutilshim.IoutilShim{},
 		baseLocalMountPoint: localMountPoint,
 		mounted:             false,
 		keyring:             keyringFile,
@@ -70,7 +75,7 @@ func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 	logger.Info("start")
 	defer logger.Info("end")
 
-	err := c.systemUtil.MkdirAll(c.baseLocalMountPoint, os.ModePerm)
+	err := c.os.MkdirAll(c.baseLocalMountPoint, os.ModePerm)
 	if err != nil {
 		logger.Error("failed-to-create-local-dir", err)
 		return "", fmt.Errorf("failed to create local directory '%s', mount filesystem failed", c.baseLocalMountPoint)
@@ -92,7 +97,7 @@ func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string,
 	defer logger.Info("end")
 
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
-	err := c.systemUtil.MkdirAll(sharePath, os.ModePerm)
+	err := c.os.MkdirAll(sharePath, os.ModePerm)
 	if err != nil {
 		logger.Error("failed-to-create-share", err)
 		return "", fmt.Errorf("failed to create share '%s'", sharePath)
@@ -106,7 +111,7 @@ func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	defer logger.Info("end")
 
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
-	err := c.systemUtil.Remove(sharePath)
+	err := c.os.Remove(sharePath)
 	if err != nil {
 		logger.Error("failed-to-delete-share", err)
 		return fmt.Errorf("failed to delete share '%s'", sharePath)
@@ -120,7 +125,7 @@ func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (st
 	defer logger.Info("end")
 
 	shareLocalPath := filepath.Join(c.baseLocalMountPoint, shareName)
-	exists := c.systemUtil.Exists(shareLocalPath)
+	exists := utils.Exists(shareLocalPath, c.os)
 	if exists == false {
 		logger.Error("share-not-found", ShareNotFound)
 		return "", "", ShareNotFound
@@ -135,7 +140,7 @@ func (c *cephClient) GetConfigDetails(logger lager.Logger) (string, string, erro
 	if c.mds == "" || c.keyring == "" {
 		return "", "", fmt.Errorf("Error retreiving Ceph config details")
 	}
-	contents, err := c.systemUtil.ReadFile(c.keyring)
+	contents, err := c.ioutil.ReadFile(c.keyring)
 	if err != nil {
 		logger.Error("failed-to-get-keyring", KeyringNotFound)
 		return "", "", KeyringNotFound

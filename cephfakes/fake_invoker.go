@@ -4,8 +4,8 @@ package cephfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/cephbroker/cephbrokerlocal"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeInvoker struct {

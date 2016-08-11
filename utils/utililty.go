@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/os"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -21,47 +23,10 @@ func UnmarshallDataFromRequest(r *http.Request, object interface{}) error {
 	return nil
 }
 
-//go:generate counterfeiter -o ../cephfakes/fake_system_util.go . SystemUtil
-
-type SystemUtil interface {
-	MkdirAll(path string, perm os.FileMode) error
-	WriteFile(filename string, data []byte, perm os.FileMode) error
-	Remove(string) error
-	Exists(path string) bool
-	ReadFile(path string) ([]byte, error)
-}
-
-type realSystemUtil struct{}
-
-func NewRealSystemUtil() SystemUtil {
-	return &realSystemUtil{}
-}
-
-func (f *realSystemUtil) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
-
-func (f *realSystemUtil) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
-}
-
-func (f *realSystemUtil) Remove(path string) error {
-	return os.RemoveAll(path)
-}
-func (f *realSystemUtil) Exists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-func (f *realSystemUtil) ReadFile(path string) ([]byte, error) {
-	return readFile(path)
-}
-
-func ReadAndUnmarshal(object interface{}, dir string, fileName string, s SystemUtil) error {
+func ReadAndUnmarshal(object interface{}, dir string, fileName string, ioutil ioutilshim.Ioutil) error {
 	path := dir + string(os.PathSeparator) + fileName
 
-	bytes, err := s.ReadFile(path)
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -74,8 +39,8 @@ func ReadAndUnmarshal(object interface{}, dir string, fileName string, s SystemU
 	return nil
 }
 
-func MarshalAndRecord(object interface{}, dir string, fileName string, s SystemUtil) error {
-	err := s.MkdirAll(dir, 0700)
+func MarshalAndRecord(object interface{}, dir string, fileName string, osShim osshim.Os, ioutil ioutilshim.Ioutil) error {
+	err := osShim.MkdirAll(dir, 0700)
 	if err != nil {
 		return err
 	}
@@ -87,7 +52,7 @@ func MarshalAndRecord(object interface{}, dir string, fileName string, s SystemU
 		return err
 	}
 
-	return s.WriteFile(path, bytes, 0700)
+	return ioutil.WriteFile(path, bytes, 0700)
 }
 
 func readFile(path string) (content []byte, err error) {
@@ -106,3 +71,9 @@ func readFile(path string) (content []byte, err error) {
 	return
 }
 
+func Exists(path string, os osshim.Os) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}

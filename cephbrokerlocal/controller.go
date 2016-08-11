@@ -10,6 +10,8 @@ import (
 
 	"code.cloudfoundry.org/cephbroker/model"
 	"code.cloudfoundry.org/cephbroker/utils"
+	"code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/os"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -43,10 +45,11 @@ type cephController struct {
 	planId      string
 	planName    string
 	planDesc    string
-	sysUtil 		utils.SystemUtil
+	os          osshim.Os
+	ioutil      ioutilshim.Ioutil
 }
 
-func NewController(cephClient Client, serviceName, serviceId, planId, planName, planDesc, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding, sysUtil utils.SystemUtil) Controller {
+func NewController(cephClient Client, serviceName, serviceId, planId, planName, planDesc, configPath string, instanceMap map[string]*model.ServiceInstance, bindingMap map[string]*model.ServiceBinding, os osshim.Os, ioutil ioutilshim.Ioutil) Controller {
 	return &cephController{
 		cephClient:  cephClient,
 		serviceName: serviceName,
@@ -57,7 +60,8 @@ func NewController(cephClient Client, serviceName, serviceId, planId, planName, 
 		configPath:  configPath,
 		instanceMap: instanceMap,
 		bindingMap:  bindingMap,
-		sysUtil:		sysUtil,
+		os:          os,
+		ioutil:      ioutil,
 	}
 }
 
@@ -116,7 +120,7 @@ func (c *cephController) CreateServiceInstance(logger lager.Logger, serviceInsta
 	}
 
 	c.instanceMap[serviceInstanceId] = &instance
-	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.sysUtil)
+	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.os, c.ioutil)
 	if err != nil {
 		return model.CreateServiceInstanceResponse{}, err
 	}
@@ -168,7 +172,7 @@ func (c *cephController) DeleteServiceInstance(logger lager.Logger, serviceInsta
 		return err
 	}
 	delete(c.instanceMap, serviceInstanceId)
-	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.sysUtil)
+	err = utils.MarshalAndRecord(c.instanceMap, c.configPath, "service_instances.json", c.os, c.ioutil)
 	if err != nil {
 		return err
 	}
@@ -204,7 +208,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 	volumeMounts := []model.VolumeMount{volumeMount}
 	creds := model.Credentials{}
 	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
-	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.sysUtil)
+	err = utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.os, c.ioutil)
 	if err != nil {
 		logger.Error("failed-to-json-marshal-service-bindings", err)
 		return model.CreateServiceBindingResponse{}, err
@@ -251,7 +255,7 @@ func (c *cephController) UnbindServiceInstance(logger lager.Logger, serviceInsta
 	logger.Info("start")
 	defer logger.Info("end")
 	delete(c.bindingMap, bindingId)
-	err := utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.sysUtil)
+	err := utils.MarshalAndRecord(c.bindingMap, c.configPath, "service_bindings.json", c.os, c.ioutil)
 	if err != nil {
 		logger.Error("error-unbind", err)
 		return err

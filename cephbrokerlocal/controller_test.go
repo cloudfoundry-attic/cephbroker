@@ -8,10 +8,13 @@ import (
 	. "code.cloudfoundry.org/cephbroker/cephbrokerlocal"
 	"code.cloudfoundry.org/cephbroker/cephfakes"
 	"code.cloudfoundry.org/cephbroker/model"
-	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
 
+	"code.cloudfoundry.org/goshims/ioutil/ioutil_fake"
+	"code.cloudfoundry.org/goshims/os/os_fake"
+	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"os"
@@ -25,7 +28,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 		cephClient      Client
 		controller      Controller
 		fakeInvoker     *cephfakes.FakeInvoker
-		fakeSystemUtil  *cephfakes.FakeSystemUtil
+		fakeOs          *os_fake.FakeOs
+		fakeIoutil      *ioutil_fake.FakeIoutil
 		localMountPoint string
 		serviceGuid     string
 		instanceMap     map[string]*model.ServiceInstance
@@ -41,12 +45,13 @@ var _ = Describe("Cephbrokerlocal", func() {
 		testLogger = lagertest.NewTestLogger("ControllerTest")
 		fakeInvoker = new(cephfakes.FakeInvoker)
 		serviceGuid = "some-service-guid"
-		fakeSystemUtil = new(cephfakes.FakeSystemUtil)
+		fakeOs = &os_fake.FakeOs{}
+		fakeIoutil = &ioutil_fake.FakeIoutil{}
 		localMountPoint = "/tmp/share"
-		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds-url:9999", fakeInvoker, fakeSystemUtil, localMountPoint, "/some-keyring-file")
+		cephClient = NewCephClientWithInvokerAndSystemUtil("some-mds-url:9999", fakeInvoker, fakeOs, fakeIoutil, localMountPoint, "/some-keyring-file")
 		instanceMap = make(map[string]*model.ServiceInstance)
 		bindingMap = make(map[string]*model.ServiceBinding)
-		controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/tmp/cephbroker", instanceMap, bindingMap, fakeSystemUtil)
+		controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/tmp/cephbroker", instanceMap, bindingMap, fakeOs, fakeIoutil)
 
 	})
 	Context(".Catalog", func() {
@@ -85,11 +90,11 @@ var _ = Describe("Cephbrokerlocal", func() {
 
 		})
 		It("should create a valid service instance", func() {
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 		})
 		Context("should fail to create service instance", func() {
 			It("when base filesystem directory creation errors", func() {
-				fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
+				fakeOs.MkdirAllReturns(fmt.Errorf("failed to create directory"))
 
 				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).To(HaveOccurred())
@@ -108,17 +113,17 @@ var _ = Describe("Cephbrokerlocal", func() {
 				_, err := controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).ToNot(HaveOccurred())
 
-				fakeSystemUtil.MkdirAllReturns(fmt.Errorf("failed to create directory"))
+				fakeOs.MkdirAllReturns(fmt.Errorf("failed to create directory"))
 				_, err = controller.CreateServiceInstance(testLogger, "service-instance-guid", instance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal(fmt.Sprintf("failed to create share '%s'", path.Join(localMountPoint, "service-instance-guid"))))
 			})
 			It("should error when updating internal bookkeeping fails", func() {
 				const BAD_PATH = "/non-existent-path"
-				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, BAD_PATH, instanceMap, bindingMap, fakeSystemUtil)
-				fakeSystemUtil.MkdirAllStub = func(path string, _ os.FileMode) error {
+				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, BAD_PATH, instanceMap, bindingMap, fakeOs, fakeIoutil)
+				fakeOs.MkdirAllStub = func(path string, _ os.FileMode) error {
 					if path == BAD_PATH {
-  					return fmt.Errorf(DONT_CARE_ERROR)
+						return fmt.Errorf(DONT_CARE_ERROR)
 					}
 					return nil
 				}
@@ -141,7 +146,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 
 		})
 		It("should confirm existence of service instance", func() {
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 			serviceExists := controller.ServiceInstanceExists(testLogger, serviceGuid)
 			Expect(serviceExists).To(Equal(true))
 		})
@@ -161,7 +166,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 
 		})
 		It("should return true if properties match", func() {
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 			anotherInstance := model.ServiceInstance{}
 			properties := map[string]interface{}{"some-property": "some-value"}
 			anotherInstance.Parameters = properties
@@ -170,7 +175,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(propertiesMatch).To(Equal(true))
 		})
 		It("should return false if properties do not match", func() {
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 			anotherInstance := model.ServiceInstance{}
 			properties := map[string]interface{}{"some-property": "some-value"}
 			anotherInstance.Parameters = properties
@@ -189,7 +194,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
 		})
 		It("should delete service instance", func() {
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -197,14 +202,14 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(serviceExists).To(Equal(false))
 		})
 		It("should error when trying to delete non-existence service instance", func() {
-			fakeSystemUtil.RemoveReturns(fmt.Errorf("error-in-delete-share"))
+			fakeOs.RemoveReturns(fmt.Errorf("error-in-delete-share"))
 			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to delete share '%s'", path.Join(localMountPoint, serviceGuid))))
 		})
 		It("should error when updating internal bookkeeping fails", func() {
-			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
-			fakeSystemUtil.MkdirAllReturns(fmt.Errorf(AN_ERROR))
+			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeOs, fakeIoutil)
+			fakeOs.MkdirAllReturns(fmt.Errorf(AN_ERROR))
 			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(fmt.Sprintf(AN_ERROR)))
@@ -221,11 +226,12 @@ var _ = Describe("Cephbrokerlocal", func() {
 			instance.PlanId = "some-planId"
 			instance.Parameters = map[string]interface{}{"some-property": "some-value"}
 			bindingInfo = model.ServiceBinding{}
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
 		})
 		It("should be able bind service instance", func() {
-			fakeSystemUtil.ExistsReturns(true)
-			fakeSystemUtil.ReadFileReturns([]byte("some keyring content"), nil)
+			fakeOs.StatReturns(nil, nil)
+			fakeOs.IsNotExistReturns(false)
+			fakeIoutil.ReadFileReturns([]byte("some keyring content"), nil)
 			bindingInfo.Parameters = map[string]interface{}{"container_path": "/some-user-specified-path"}
 			bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 			Expect(err).ToNot(HaveOccurred())
@@ -241,15 +247,17 @@ var _ = Describe("Cephbrokerlocal", func() {
 		})
 		Context("should fail", func() {
 			It("when unable to find the backing share", func() {
-				fakeSystemUtil.ExistsReturns(false)
+				fakeOs.StatReturns(nil, errors.New("foo"))
+				fakeOs.IsNotExistReturns(true)
 				_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("share not found, internal error"))
 			})
 			It("when updating internal bookkeeping fails", func() {
-				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
-				fakeSystemUtil.MkdirAllReturns(fmt.Errorf(DONT_CARE_ERROR))
-				fakeSystemUtil.ExistsReturns(true)
+				controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeOs, fakeIoutil)
+				fakeOs.MkdirAllReturns(fmt.Errorf(DONT_CARE_ERROR))
+				fakeOs.StatReturns(nil, nil)
+				fakeOs.IsNotExistReturns(false)
 				_, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal(fmt.Sprintf(DONT_CARE_ERROR)))
@@ -269,8 +277,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 		})
 		It("should confirm existence of service instance", func() {
 			binding := model.ServiceBinding{}
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeOs, binding, controller, serviceGuid, bindingId)
 			bindingExists := controller.ServiceBindingExists(testLogger, serviceGuid, bindingId)
 			Expect(bindingExists).To(Equal(true))
 		})
@@ -293,16 +301,16 @@ var _ = Describe("Cephbrokerlocal", func() {
 		})
 		It("should return true if properties match", func() {
 			binding := model.ServiceBinding{}
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeOs, binding, controller, serviceGuid, bindingId)
 			anotherBinding := model.ServiceBinding{}
 			propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
 			Expect(propertiesMatch).To(Equal(true))
 		})
 		It("should return false if properties do not match", func() {
 			binding := model.ServiceBinding{}
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeOs, binding, controller, serviceGuid, bindingId)
 			anotherBinding := model.ServiceBinding{}
 			anotherBinding.AppId = "some-other-appId"
 			propertiesMatch := controller.ServiceBindingPropertiesMatch(testLogger, serviceGuid, bindingId, anotherBinding)
@@ -321,8 +329,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 			bindingId = "some-binding-id"
 
 			binding := model.ServiceBinding{}
-			successfullServiceInstanceCreate(testLogger, fakeSystemUtil, instance, controller, serviceGuid)
-			successfullServiceBindingCreate(testLogger, fakeSystemUtil, binding, controller, serviceGuid, bindingId)
+			successfullServiceInstanceCreate(testLogger, fakeOs, instance, controller, serviceGuid)
+			successfullServiceBindingCreate(testLogger, fakeOs, binding, controller, serviceGuid, bindingId)
 		})
 		It("should delete service binding", func() {
 			err := controller.UnbindServiceInstance(testLogger, serviceGuid, bindingId)
@@ -332,8 +340,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(exists).To(Equal(false))
 		})
 		It("when updating internal bookkeeping fails", func() {
-			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeSystemUtil)
-			fakeSystemUtil.MkdirAllReturns(fmt.Errorf(AN_ERROR))
+			controller = NewController(cephClient, "service-name", "service-id", planId, planName, planDesc, "/non-existent-path", instanceMap, bindingMap, fakeOs, fakeIoutil)
+			fakeOs.MkdirAllReturns(fmt.Errorf(AN_ERROR))
 			err := controller.UnbindServiceInstance(testLogger, serviceGuid, bindingId)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(AN_ERROR))
@@ -387,16 +395,17 @@ var _ = Describe("RealInvoker", func() {
 	})
 })
 
-func successfullServiceInstanceCreate(testLogger lager.Logger, fakeSystemUtil *cephfakes.FakeSystemUtil, instance model.ServiceInstance, controller Controller, serviceGuid string) {
-	fakeSystemUtil.MkdirAllReturns(nil)
+func successfullServiceInstanceCreate(testLogger lager.Logger, fakeOs *os_fake.FakeOs, instance model.ServiceInstance, controller Controller, serviceGuid string) {
+	fakeOs.MkdirAllReturns(nil)
 	createResponse, err := controller.CreateServiceInstance(testLogger, serviceGuid, instance)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(createResponse.DashboardUrl).ToNot(Equal(""))
-	Expect(fakeSystemUtil.MkdirAllCallCount()).To(Equal(3))
+	Expect(fakeOs.MkdirAllCallCount()).To(Equal(3))
 }
 
-func successfullServiceBindingCreate(testLogger lager.Logger, fakeSystemUtil *cephfakes.FakeSystemUtil, binding model.ServiceBinding, controller Controller, serviceGuid string, bindingId string) {
-	fakeSystemUtil.ExistsReturns(true)
+func successfullServiceBindingCreate(testLogger lager.Logger, fakeOs *os_fake.FakeOs, binding model.ServiceBinding, controller Controller, serviceGuid string, bindingId string) {
+	fakeOs.StatReturns(nil, nil)
+	fakeOs.IsNotExistReturns(false)
 	bindResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, bindingId, binding)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(bindResponse.VolumeMounts).ToNot(BeNil())

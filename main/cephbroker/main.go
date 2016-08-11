@@ -8,13 +8,15 @@ import (
 
 	"syscall"
 
-	cf_lager "code.cloudfoundry.org/cflager"
-	cf_debug_server "code.cloudfoundry.org/debugserver"
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/cephbroker/cephbrokerhttp"
 	"code.cloudfoundry.org/cephbroker/cephbrokerlocal"
 	"code.cloudfoundry.org/cephbroker/model"
 	"code.cloudfoundry.org/cephbroker/utils"
+	cf_lager "code.cloudfoundry.org/cflager"
+	cf_debug_server "code.cloudfoundry.org/debugserver"
+	"code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/os"
+	"code.cloudfoundry.org/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
@@ -126,7 +128,7 @@ func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Memb
 	if err != nil {
 		return nil, err
 	}
-	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *planId, *planName, *planDesc, *configPath, existingServiceInstances, existingServiceBindings, utils.NewRealSystemUtil())
+	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *planId, *planName, *planDesc, *configPath, existingServiceInstances, existingServiceBindings, osshim.OsShim{}, ioutilshim.IoutilShim{})
 	handler, err := cephbrokerhttp.NewHandler(logger, controller)
 	exitOnFailure(logger, err)
 
@@ -150,7 +152,7 @@ func parseCommandLine() {
 func loadServiceInstances() (map[string]*model.ServiceInstance, error) {
 	var serviceInstancesMap map[string]*model.ServiceInstance
 
-	err := utils.ReadAndUnmarshal(&serviceInstancesMap, *configPath, "service_instances.json", utils.NewRealSystemUtil())
+	err := utils.ReadAndUnmarshal(&serviceInstancesMap, *configPath, "service_instances.json", ioutilshim.IoutilShim{})
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("WARNING: service instance data file '%s' does not exist: \n", "service_instances.json")
@@ -165,7 +167,7 @@ func loadServiceInstances() (map[string]*model.ServiceInstance, error) {
 
 func loadServiceBindings() (map[string]*model.ServiceBinding, error) {
 	var bindingMap map[string]*model.ServiceBinding
-	err := utils.ReadAndUnmarshal(&bindingMap, *configPath, "service_bindings.json", utils.NewRealSystemUtil())
+	err := utils.ReadAndUnmarshal(&bindingMap, *configPath, "service_bindings.json", ioutilshim.IoutilShim{})
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("WARNING: key map data file '%s' does not exist: \n", "service_bindings.json")

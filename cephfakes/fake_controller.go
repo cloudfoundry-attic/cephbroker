@@ -4,9 +4,9 @@ package cephfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/cephbroker/cephbrokerlocal"
 	"code.cloudfoundry.org/cephbroker/model"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeController struct {
