@@ -111,7 +111,7 @@ func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	defer logger.Info("end")
 
 	sharePath := filepath.Join(c.baseLocalMountPoint, shareName)
-	err := c.os.Remove(sharePath)
+	err := c.os.RemoveAll(sharePath)
 	if err != nil {
 		logger.Error("failed-to-delete-share", err)
 		return fmt.Errorf("failed to delete share '%s'", sharePath)

@@ -202,7 +202,7 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(serviceExists).To(Equal(false))
 		})
 		It("should error when trying to delete non-existence service instance", func() {
-			fakeOs.RemoveReturns(fmt.Errorf("error-in-delete-share"))
+			fakeOs.RemoveAllReturns(fmt.Errorf("error-in-delete-share"))
 			err := controller.DeleteServiceInstance(testLogger, serviceGuid)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to delete share '%s'", path.Join(localMountPoint, serviceGuid))))
