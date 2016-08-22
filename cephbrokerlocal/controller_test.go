@@ -232,18 +232,17 @@ var _ = Describe("Cephbrokerlocal", func() {
 			fakeOs.StatReturns(nil, nil)
 			fakeOs.IsNotExistReturns(false)
 			fakeIoutil.ReadFileReturns([]byte("some keyring content"), nil)
-			bindingInfo.Parameters = map[string]interface{}{"container_path": "/some-user-specified-path"}
+			bindingInfo.Parameters = map[string]interface{}{"container_dir": "/some-user-specified-path"}
 			bindingResponse, err := controller.BindServiceInstance(testLogger, serviceGuid, "some-binding-id", bindingInfo)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(bindingResponse.VolumeMounts).ToNot(BeNil())
 			Expect(len(bindingResponse.VolumeMounts)).To(Equal(1))
-			Expect(bindingResponse.VolumeMounts[0].ContainerPath).To(Equal("/some-user-specified-path"))
-			Expect(bindingResponse.VolumeMounts[0].Private).ToNot(BeNil())
-			Expect(bindingResponse.VolumeMounts[0].Private.Driver).To(Equal("cephdriver"))
-			Expect(bindingResponse.VolumeMounts[0].Private.Config).ToNot(BeNil())
-			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some-mds"))
-			Expect(bindingResponse.VolumeMounts[0].Private.Config).NotTo(ContainSubstring("9999"))
-			Expect(bindingResponse.VolumeMounts[0].Private.Config).To(ContainSubstring("some keyring content"))
+			Expect(bindingResponse.VolumeMounts[0].ContainerDir).To(Equal("/some-user-specified-path"))
+			Expect(bindingResponse.VolumeMounts[0].Device).ToNot(BeNil())
+			Expect(bindingResponse.VolumeMounts[0].DeviceType).To(Equal("shared"))
+			Expect(bindingResponse.VolumeMounts[0].Driver).To(Equal("cephdriver"))
+			Expect(bindingResponse.VolumeMounts[0].Device.MountConfig).ToNot(BeNil())
+			Expect(bindingResponse.VolumeMounts[0].Device.MountConfig.Keyring).To(Equal("some keyring content"))
 		})
 		Context("should fail", func() {
 			It("when unable to find the backing share", func() {

@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"encoding/json"
-
 	"code.cloudfoundry.org/cephbroker/model"
 	"code.cloudfoundry.org/cephbroker/utils"
 	"code.cloudfoundry.org/goshims/ioutil"
@@ -17,7 +15,7 @@ import (
 
 const (
 	DEFAULT_POLLING_INTERVAL_SECONDS = 10
-	DEFAULT_CONTAINER_PATH           = "/var/vcap/data/"
+	DEFAULT_CONTAINER_DIR = "/var/vcap/data/"
 )
 
 //go:generate counterfeiter -o ../cephfakes/fake_controller.go . Controller
@@ -188,7 +186,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 		logger.Error("failed-getting-paths-for-share", err)
 		return model.CreateServiceBindingResponse{}, err
 	}
-	containerMountPath := determineContainerMountPath(bindingInfo.Parameters, serviceInstanceId)
+	containerMountPath := determineContainerMountDir(bindingInfo.Parameters, serviceInstanceId)
 	mds, keyring, err := c.cephClient.GetConfigDetails(logger)
 	if err != nil {
 		logger.Error("failed-to-determine-container-mountpath", err)
@@ -197,14 +195,9 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 
 	mdsParts := strings.Split(mds, ":")
 	cephConfig := model.CephConfig{IP: mdsParts[0], Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
-	config, err := json.Marshal(cephConfig)
-	if err != nil {
-		logger.Error("failed-to-marshal-cephconfig", err)
-		return model.CreateServiceBindingResponse{}, err
-	}
-	privateDetails := model.VolumeMountPrivateDetails{Driver: "cephdriver", GroupId: serviceInstanceId, Config: string(config)}
+	device := model.SharedDevice{VolumeId: serviceInstanceId, MountConfig: cephConfig}
 
-	volumeMount := model.VolumeMount{ContainerPath: containerMountPath, Mode: "rw", Private: privateDetails}
+	volumeMount := model.VolumeMount{Driver: "cephdriver", ContainerDir: containerMountPath, Mode: "rw", DeviceType: "shared", Device: device}
 	volumeMounts := []model.VolumeMount{volumeMount}
 	creds := model.Credentials{}
 	createBindingResponse := model.CreateServiceBindingResponse{Credentials: creds, VolumeMounts: volumeMounts}
@@ -274,12 +267,12 @@ func (c *cephController) GetBinding(logger lager.Logger, instanceId, bindingId s
 	return model.ServiceBinding{}, fmt.Errorf("binding not found")
 }
 
-func determineContainerMountPath(parameters map[string]interface{}, volId string) string {
-	if containerPath, ok := parameters["container_path"]; ok {
-		return containerPath.(string)
+func determineContainerMountDir(parameters map[string]interface{}, volId string) string {
+	if containerDir, ok := parameters["container_dir"]; ok {
+		return containerDir.(string)
 	}
-	if containerPath, ok := parameters["path"]; ok {
-		return containerPath.(string)
+	if containerDir, ok := parameters["path"]; ok {
+		return containerDir.(string)
 	}
-	return path.Join(DEFAULT_CONTAINER_PATH, volId)
+	return path.Join(DEFAULT_CONTAINER_DIR, volId)
 }

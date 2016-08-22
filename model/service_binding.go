@@ -26,15 +26,16 @@ type Credentials struct {
 }
 
 type VolumeMount struct {
-	ContainerPath string                    `json:"container_path"`
-	Mode          string                    `json:"mode"`
-	Private       VolumeMountPrivateDetails `json:"private"`
+	Driver       string       `json:"driver"`
+	ContainerDir string       `json:"container_dir"`
+	Mode         string       `json:"mode"`
+	DeviceType   string       `json:"device_type"`
+	Device       SharedDevice `json:"device"`
 }
 
-type VolumeMountPrivateDetails struct {
-	Driver  string `json:"driver"`
-	GroupId string `json:"group_id"`
-	Config  string `json:"config"`
+type SharedDevice struct {
+	VolumeId    string     `json:"volume_id"`
+	MountConfig CephConfig `json:"mount_config"`
 }
 
 type CephConfig struct {
