@@ -242,7 +242,8 @@ var _ = Describe("Cephbrokerlocal", func() {
 			Expect(bindingResponse.VolumeMounts[0].DeviceType).To(Equal("shared"))
 			Expect(bindingResponse.VolumeMounts[0].Driver).To(Equal("cephdriver"))
 			Expect(bindingResponse.VolumeMounts[0].Device.MountConfig).ToNot(BeNil())
-			Expect(bindingResponse.VolumeMounts[0].Device.MountConfig.Keyring).To(Equal("some keyring content"))
+			//Expect(bindingResponse.VolumeMounts[0].Device.MountConfig.Keyring).To(Equal("some keyring content"))
+			Expect(bindingResponse.VolumeMounts[0].Device.MountConfig).To(ContainSubstring("some keyring content"))
 		})
 		Context("should fail", func() {
 			It("when unable to find the backing share", func() {

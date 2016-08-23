@@ -34,8 +34,8 @@ type VolumeMount struct {
 }
 
 type SharedDevice struct {
-	VolumeId    string     `json:"volume_id"`
-	MountConfig CephConfig `json:"mount_config"`
+	VolumeId    string `json:"volume_id"`
+	MountConfig string `json:"mount_config"`
 }
 
 type CephConfig struct {
