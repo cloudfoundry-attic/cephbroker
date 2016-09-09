@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/goshims/ioutil"
 	"code.cloudfoundry.org/goshims/os"
 	"code.cloudfoundry.org/lager"
-	"encoding/json"
 )
 
 const (
@@ -196,15 +195,7 @@ func (c *cephController) BindServiceInstance(logger lager.Logger, serviceInstanc
 
 	mdsParts := strings.Split(mds, ":")
 	cephConfig := model.CephConfig{IP: mdsParts[0], Keyring: keyring, RemoteMountPoint: remoteSharePath, LocalMountPoint: localMountPoint}
-
-	// TODO: config should be an object, but we messed up our implementation in the cc-bridge (NSYNC) so it temporarily
-	// must be an object so as not to blow up.
-	config, err := json.Marshal(cephConfig)
-	if err != nil {
-		logger.Error("failed-to-marshal-cephconfig", err)
-		return model.CreateServiceBindingResponse{}, err
-	}
-	device := model.SharedDevice{VolumeId: serviceInstanceId, MountConfig: string(config)}
+	device := model.SharedDevice{VolumeId: serviceInstanceId, MountConfig: cephConfig}
 
 	volumeMount := model.VolumeMount{Driver: "cephdriver", ContainerDir: containerMountPath, Mode: "rw", DeviceType: "shared", Device: device}
 	volumeMounts := []model.VolumeMount{volumeMount}
