@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/cephbroker/model"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/os_wrap/exec_wrap/execfakes"
+	"code.cloudfoundry.org/goshims/execshim/exec_fake"
 
 	"code.cloudfoundry.org/goshims/ioutil/ioutil_fake"
 	"code.cloudfoundry.org/goshims/os/os_fake"
@@ -352,16 +352,16 @@ var _ = Describe("Cephbrokerlocal", func() {
 var _ = Describe("RealInvoker", func() {
 	var (
 		subject    Invoker
-		fakeCmd    *execfakes.FakeCmd
-		fakeExec   *execfakes.FakeExec
+		fakeCmd    *exec_fake.FakeCmd
+		fakeExec   *exec_fake.FakeExec
 		testLogger = lagertest.NewTestLogger("InvokerTest")
 		cmd        = "some-fake-command"
 		args       = []string{"fake-args-1"}
 	)
 	Context("when invoking an executable", func() {
 		BeforeEach(func() {
-			fakeExec = new(execfakes.FakeExec)
-			fakeCmd = new(execfakes.FakeCmd)
+			fakeExec = new(exec_fake.FakeExec)
+			fakeCmd = new(exec_fake.FakeCmd)
 			fakeExec.CommandReturns(fakeCmd)
 			subject = NewRealInvokerWithExec(fakeExec)
 		})
