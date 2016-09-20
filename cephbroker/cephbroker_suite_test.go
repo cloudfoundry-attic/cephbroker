@@ -1,19 +1,19 @@
-package cephbrokerlocal_test
+package cephbroker_test
 
 import (
-	"fmt"
-	"io"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"testing"
+	"io"
+	"fmt"
 )
 
-func TestCephbrokerlocal(t *testing.T) {
+func TestBroker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Cephbrokerlocal Suite")
+	RunSpecs(t, "Broker Suite")
 }
+
 
 type errCloser struct{ io.Reader }
 

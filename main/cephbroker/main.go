@@ -1,33 +1,35 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"fmt"
-	"os"
+
+	"code.cloudfoundry.org/cflager"
+	"code.cloudfoundry.org/debugserver"
 
 	"syscall"
 
-	"code.cloudfoundry.org/cephbroker/cephbrokerhttp"
-	"code.cloudfoundry.org/cephbroker/cephbrokerlocal"
-	"code.cloudfoundry.org/cephbroker/model"
+	"code.cloudfoundry.org/cephbroker/cephbroker"
 	"code.cloudfoundry.org/cephbroker/utils"
-	cf_lager "code.cloudfoundry.org/cflager"
-	cf_debug_server "code.cloudfoundry.org/debugserver"
-	"code.cloudfoundry.org/goshims/ioutil"
-	"code.cloudfoundry.org/goshims/os"
 	"code.cloudfoundry.org/lager"
+	"github.com/pivotal-cf/brokerapi"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
-	"github.com/tedsuo/ifrit/sigmon"
+	"code.cloudfoundry.org/goshims/ioutil"
+)
+
+var dataDir = flag.String(
+	"dataDir",
+	"",
+	"[REQUIRED] - Broker's state will be stored here to persist across reboots",
 )
 
 var atAddress = flag.String(
 	"listenAddr",
 	"0.0.0.0:8999",
-	"host:port to serve cephfs service broker functions",
+	"host:port to serve service broker API",
 )
+
 var mds = flag.String(
 	"mds",
 	"10.0.0.106:6789",
@@ -45,12 +47,12 @@ var configPath = flag.String(
 )
 var serviceName = flag.String(
 	"serviceName",
-	"cephfs",
+	"localvolume",
 	"name of the service to register with cloud controller",
 )
 var serviceId = flag.String(
 	"serviceId",
-	"cephfs-service-guid",
+	"service-guid",
 	"ID of the service to register with cloud controller",
 )
 var planName = flag.String(
@@ -65,10 +67,9 @@ var planId = flag.String(
 )
 var planDesc = flag.String(
 	"planDesc",
-	"free ceph filesystem",
+	"free local filesystem",
 	"description of the service plan to register with cloud controller",
 )
-
 var baseMountPath = flag.String(
 	"baseMountPath",
 	"/tmp/share",
@@ -82,100 +83,46 @@ var baseRemoteMountPath = flag.String(
 
 func main() {
 	parseCommandLine()
-	withLogger, logTap := logger()
-	defer withLogger.Info("ends")
-
 	syscall.Umask(000)
 
-	servers, err := createCephBrokerServer(withLogger, *atAddress)
+	logger, logSink := cflager.New("localbroker")
+	logger.Info("starting")
+	defer logger.Info("ends")
 
-	if err != nil {
-		panic("failed to load services metadata.....aborting")
+	server := createServer(logger)
+
+	if dbgAddr := debugserver.DebugAddress(flag.CommandLine); dbgAddr != "" {
+		server = utils.ProcessRunnerFor(grouper.Members{
+			{"debug-server", debugserver.Runner(dbgAddr, logSink)},
+			{"broker-api", server},
+		})
 	}
-	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
-		servers = append(grouper.Members{
-			{"debug-server", cf_debug_server.Runner(dbgAddr, logTap)},
-		}, servers...)
-	}
-	process := ifrit.Invoke(processRunnerFor(servers))
-	withLogger.Info("started")
-	untilTerminated(withLogger, process)
-}
 
-func exitOnFailure(logger lager.Logger, err error) {
-	if err != nil {
-		logger.Error("Fatal err.. aborting", err)
-		panic(err.Error())
-	}
-}
-
-func untilTerminated(logger lager.Logger, process ifrit.Process) {
-	err := <-process.Wait()
-	exitOnFailure(logger, err)
-}
-
-func processRunnerFor(servers grouper.Members) ifrit.Runner {
-	return sigmon.New(grouper.NewOrdered(os.Interrupt, servers))
-}
-
-func createCephBrokerServer(logger lager.Logger, atAddress string) (grouper.Members, error) {
-	cephClient := cephbrokerlocal.NewCephClient(*mds, *baseMountPath, *keyringFile, *baseRemoteMountPath)
-	existingServiceInstances, err := loadServiceInstances()
-	if err != nil {
-		return nil, err
-	}
-	existingServiceBindings, err := loadServiceBindings()
-	if err != nil {
-		return nil, err
-	}
-	controller := cephbrokerlocal.NewController(cephClient, *serviceName, *serviceId, *planId, *planName, *planDesc, *configPath, existingServiceInstances, existingServiceBindings, &osshim.OsShim{}, &ioutilshim.IoutilShim{})
-	handler, err := cephbrokerhttp.NewHandler(logger, controller)
-	exitOnFailure(logger, err)
-
-	return grouper.Members{
-		{"http-server", http_server.New(atAddress, handler)},
-	}, nil
-}
-
-func logger() (lager.Logger, *lager.ReconfigurableSink) {
-
-	logger, reconfigurableSink := cf_lager.New("ceph-broker")
-	return logger, reconfigurableSink
+	process := ifrit.Invoke(server)
+	logger.Info("started")
+	utils.UntilTerminated(logger, process)
 }
 
 func parseCommandLine() {
-	cf_lager.AddFlags(flag.CommandLine)
-	cf_debug_server.AddFlags(flag.CommandLine)
+	cflager.AddFlags(flag.CommandLine)
+	debugserver.AddFlags(flag.CommandLine)
 	flag.Parse()
 }
 
-func loadServiceInstances() (map[string]*model.ServiceInstance, error) {
-	var serviceInstancesMap map[string]*model.ServiceInstance
+func createServer(logger lager.Logger) ifrit.Runner {
+	controller := cephbroker.NewController(cephbroker.NewCephClient(
+		*mds,
+		*baseMountPath,
+		*keyringFile,
+		*baseRemoteMountPath,
+	))
+	serviceBroker := cephbroker.New(
+		logger, controller,
+		*serviceName, *serviceId, *planName, *planId, *planDesc, *dataDir,
+		&ioutilshim.IoutilShim{},
+	)
 
-	err := utils.ReadAndUnmarshal(&serviceInstancesMap, *configPath, "service_instances.json", &ioutilshim.IoutilShim{})
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("WARNING: service instance data file '%s' does not exist: \n", "service_instances.json")
-			serviceInstancesMap = make(map[string]*model.ServiceInstance)
-		} else {
-			return nil, errors.New(fmt.Sprintf("Could not load the service instances, message: %s", err.Error()))
-		}
-	}
+	handler := brokerapi.New(serviceBroker, logger.Session("broker-api"), nil)
 
-	return serviceInstancesMap, nil
-}
-
-func loadServiceBindings() (map[string]*model.ServiceBinding, error) {
-	var bindingMap map[string]*model.ServiceBinding
-	err := utils.ReadAndUnmarshal(&bindingMap, *configPath, "service_bindings.json", &ioutilshim.IoutilShim{})
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("WARNING: key map data file '%s' does not exist: \n", "service_bindings.json")
-			bindingMap = make(map[string]*model.ServiceBinding)
-		} else {
-			return nil, errors.New(fmt.Sprintf("Could not load the service instances, message: %s", err.Error()))
-		}
-	}
-
-	return bindingMap, nil
+	return http_server.New(*atAddress, handler)
 }

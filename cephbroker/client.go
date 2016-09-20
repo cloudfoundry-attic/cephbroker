@@ -1,4 +1,4 @@
-package cephbrokerlocal
+package cephbroker
 
 import (
 	"errors"
@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/cephbroker/utils"
-	"code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/execshim"
+	ioutilshim "code.cloudfoundry.org/goshims/ioutil"
 	"code.cloudfoundry.org/goshims/os"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/goshims/execshim"
 )
+
+//go:generate counterfeiter -o ../cephfakes/fake_ceph_client.go . Client
 
 type Client interface {
 	IsFilesystemMounted(lager.Logger) bool
