@@ -122,7 +122,7 @@ func createServer(logger lager.Logger) ifrit.Runner {
 		&ioutilshim.IoutilShim{},
 	)
 
-	handler := brokerapi.New(serviceBroker, logger.Session("broker-api"), nil)
+	handler := brokerapi.New(serviceBroker, logger.Session("broker-api"), brokerapi.BrokerCredentials{})
 
 	return http_server.New(*atAddress, handler)
 }
