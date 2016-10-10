@@ -7,7 +7,7 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
-	"code.cloudfoundry.org/goshims/os"
+	"code.cloudfoundry.org/goshims/osshim"
 )
 
 func ExitOnFailure(logger lager.Logger, err error) {

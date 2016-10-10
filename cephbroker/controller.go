@@ -17,7 +17,7 @@ type BindResponse struct {
 
 type Controller interface {
 	voldriver.Provisioner
-	Bind(logger lager.Logger, instanceID string) BindResponse
+	Bind(env voldriver.Env, instanceID string) BindResponse
 }
 
 type controller struct {
@@ -28,8 +28,8 @@ func NewController(cephClient Client) Controller {
 	return &controller{cephClient: cephClient}
 }
 
-func (p *controller) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
-	logger = logger.Session("provision")
+func (p *controller) Create(env voldriver.Env, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
+	logger := (*env.Logger()).Session("provision")
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -50,8 +50,8 @@ func (p *controller) Create(logger lager.Logger, createRequest voldriver.CreateR
 	return voldriver.ErrorResponse{}
 }
 
-func (p *controller) Remove(logger lager.Logger, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
-	logger = logger.Session("remove")
+func (p *controller) Remove(env voldriver.Env, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
+	logger := (*env.Logger()).Session("remove")
 	logger.Info("start")
 	defer logger.Info("end")
 	err := p.cephClient.DeleteShare(logger, removeRequest.Name)
@@ -62,8 +62,8 @@ func (p *controller) Remove(logger lager.Logger, removeRequest voldriver.RemoveR
 	return voldriver.ErrorResponse{}
 }
 
-func (p *controller) Bind(logger lager.Logger, instanceID string) BindResponse {
-	logger = logger.Session("bind-service-instance")
+func (p *controller) Bind(env voldriver.Env, instanceID string) BindResponse {
+	logger := (*env.Logger()).Session("bind-service-instance")
 	logger.Info("start")
 	defer logger.Info("end")
 	response := BindResponse{}

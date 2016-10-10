@@ -13,10 +13,10 @@ import (
 
 	"code.cloudfoundry.org/cephbroker/cephbroker"
 	"code.cloudfoundry.org/cephbroker/cephfakes"
-	"code.cloudfoundry.org/goshims/ioutil/ioutil_fake"
 	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"code.cloudfoundry.org/goshims/ioutilshim/ioutil_fake"
 )
 
 type dynamicState struct {

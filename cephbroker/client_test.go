@@ -7,12 +7,12 @@ import (
 	"code.cloudfoundry.org/cephbroker/cephbroker"
 	"code.cloudfoundry.org/cephbroker/cephfakes"
 	"code.cloudfoundry.org/goshims/execshim/exec_fake"
-	"code.cloudfoundry.org/goshims/ioutil/ioutil_fake"
-	"code.cloudfoundry.org/goshims/os/os_fake"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"code.cloudfoundry.org/goshims/ioutilshim/ioutil_fake"
+	"code.cloudfoundry.org/goshims/osshim/os_fake"
 )
 
 var CephClient = Describe("CephClient", func() {

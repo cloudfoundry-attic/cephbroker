@@ -8,8 +8,8 @@ import (
 
 	"code.cloudfoundry.org/cephbroker/utils"
 	"code.cloudfoundry.org/goshims/execshim"
-	ioutilshim "code.cloudfoundry.org/goshims/ioutil"
-	"code.cloudfoundry.org/goshims/os"
+	"code.cloudfoundry.org/goshims/ioutilshim"
+	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
 )
 

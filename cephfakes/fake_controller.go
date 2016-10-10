@@ -5,33 +5,32 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/cephbroker/cephbroker"
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 )
 
 type FakeController struct {
-	CreateStub        func(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse
+	CreateStub        func(env voldriver.Env, createRequest voldriver.CreateRequest) voldriver.ErrorResponse
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		logger        lager.Logger
+		env           voldriver.Env
 		createRequest voldriver.CreateRequest
 	}
 	createReturns struct {
 		result1 voldriver.ErrorResponse
 	}
-	RemoveStub        func(logger lager.Logger, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse
+	RemoveStub        func(env voldriver.Env, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse
 	removeMutex       sync.RWMutex
 	removeArgsForCall []struct {
-		logger        lager.Logger
+		env           voldriver.Env
 		removeRequest voldriver.RemoveRequest
 	}
 	removeReturns struct {
 		result1 voldriver.ErrorResponse
 	}
-	BindStub        func(logger lager.Logger, instanceID string) cephbroker.BindResponse
+	BindStub        func(env voldriver.Env, instanceID string) cephbroker.BindResponse
 	bindMutex       sync.RWMutex
 	bindArgsForCall []struct {
-		logger     lager.Logger
+		env        voldriver.Env
 		instanceID string
 	}
 	bindReturns struct {
@@ -41,16 +40,16 @@ type FakeController struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeController) Create(logger lager.Logger, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
+func (fake *FakeController) Create(env voldriver.Env, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		logger        lager.Logger
+		env           voldriver.Env
 		createRequest voldriver.CreateRequest
-	}{logger, createRequest})
-	fake.recordInvocation("Create", []interface{}{logger, createRequest})
+	}{env, createRequest})
+	fake.recordInvocation("Create", []interface{}{env, createRequest})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, createRequest)
+		return fake.CreateStub(env, createRequest)
 	} else {
 		return fake.createReturns.result1
 	}
@@ -62,10 +61,10 @@ func (fake *FakeController) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeController) CreateArgsForCall(i int) (lager.Logger, voldriver.CreateRequest) {
+func (fake *FakeController) CreateArgsForCall(i int) (voldriver.Env, voldriver.CreateRequest) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].createRequest
+	return fake.createArgsForCall[i].env, fake.createArgsForCall[i].createRequest
 }
 
 func (fake *FakeController) CreateReturns(result1 voldriver.ErrorResponse) {
@@ -75,16 +74,16 @@ func (fake *FakeController) CreateReturns(result1 voldriver.ErrorResponse) {
 	}{result1}
 }
 
-func (fake *FakeController) Remove(logger lager.Logger, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
+func (fake *FakeController) Remove(env voldriver.Env, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
 	fake.removeMutex.Lock()
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
-		logger        lager.Logger
+		env           voldriver.Env
 		removeRequest voldriver.RemoveRequest
-	}{logger, removeRequest})
-	fake.recordInvocation("Remove", []interface{}{logger, removeRequest})
+	}{env, removeRequest})
+	fake.recordInvocation("Remove", []interface{}{env, removeRequest})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
-		return fake.RemoveStub(logger, removeRequest)
+		return fake.RemoveStub(env, removeRequest)
 	} else {
 		return fake.removeReturns.result1
 	}
@@ -96,10 +95,10 @@ func (fake *FakeController) RemoveCallCount() int {
 	return len(fake.removeArgsForCall)
 }
 
-func (fake *FakeController) RemoveArgsForCall(i int) (lager.Logger, voldriver.RemoveRequest) {
+func (fake *FakeController) RemoveArgsForCall(i int) (voldriver.Env, voldriver.RemoveRequest) {
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
-	return fake.removeArgsForCall[i].logger, fake.removeArgsForCall[i].removeRequest
+	return fake.removeArgsForCall[i].env, fake.removeArgsForCall[i].removeRequest
 }
 
 func (fake *FakeController) RemoveReturns(result1 voldriver.ErrorResponse) {
@@ -109,16 +108,16 @@ func (fake *FakeController) RemoveReturns(result1 voldriver.ErrorResponse) {
 	}{result1}
 }
 
-func (fake *FakeController) Bind(logger lager.Logger, instanceID string) cephbroker.BindResponse {
+func (fake *FakeController) Bind(env voldriver.Env, instanceID string) cephbroker.BindResponse {
 	fake.bindMutex.Lock()
 	fake.bindArgsForCall = append(fake.bindArgsForCall, struct {
-		logger     lager.Logger
+		env        voldriver.Env
 		instanceID string
-	}{logger, instanceID})
-	fake.recordInvocation("Bind", []interface{}{logger, instanceID})
+	}{env, instanceID})
+	fake.recordInvocation("Bind", []interface{}{env, instanceID})
 	fake.bindMutex.Unlock()
 	if fake.BindStub != nil {
-		return fake.BindStub(logger, instanceID)
+		return fake.BindStub(env, instanceID)
 	} else {
 		return fake.bindReturns.result1
 	}
@@ -130,10 +129,10 @@ func (fake *FakeController) BindCallCount() int {
 	return len(fake.bindArgsForCall)
 }
 
-func (fake *FakeController) BindArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeController) BindArgsForCall(i int) (voldriver.Env, string) {
 	fake.bindMutex.RLock()
 	defer fake.bindMutex.RUnlock()
-	return fake.bindArgsForCall[i].logger, fake.bindArgsForCall[i].instanceID
+	return fake.bindArgsForCall[i].env, fake.bindArgsForCall[i].instanceID
 }
 
 func (fake *FakeController) BindReturns(result1 cephbroker.BindResponse) {

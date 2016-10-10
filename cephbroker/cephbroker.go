@@ -10,10 +10,12 @@ import (
 	"reflect"
 	"sync"
 
-	ioutilshim "code.cloudfoundry.org/goshims/ioutil"
+	"code.cloudfoundry.org/goshims/ioutilshim"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"github.com/pivotal-cf/brokerapi"
+	"context"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 )
 
 const (
@@ -118,7 +120,10 @@ func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails
 		return brokerapi.ProvisionedServiceSpec{}, brokerapi.ErrInstanceAlreadyExists
 	}
 
-	errResp := b.controller.Create(logger, voldriver.CreateRequest{
+	ctx := context.TODO()
+	env := driverhttp.NewHttpDriverEnv(&logger, &ctx)
+
+	errResp := b.controller.Create(env, voldriver.CreateRequest{
 		Name: instanceID,
 		Opts: map[string]interface{}{"volume_id": instanceID},
 	})
@@ -148,7 +153,10 @@ func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDet
 		return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 	}
 
-	errResp := b.controller.Remove(logger, voldriver.RemoveRequest{
+	ctx := context.TODO()
+	env := driverhttp.NewHttpDriverEnv(&logger, &ctx)
+
+	errResp := b.controller.Remove(env, voldriver.RemoveRequest{
 		Name: instanceID,
 	})
 
@@ -190,7 +198,10 @@ func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.Bin
 		return brokerapi.Binding{}, brokerapi.ErrBindingAlreadyExists
 	}
 
-	response := b.controller.Bind(logger, instanceID)
+	ctx := context.TODO()
+	env := driverhttp.NewHttpDriverEnv(&logger, &ctx)
+
+	response := b.controller.Bind(env, instanceID)
 
 	if response.Err != "" {
 		err := errors.New(response.Err)

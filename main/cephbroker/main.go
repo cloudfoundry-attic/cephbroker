@@ -10,12 +10,12 @@ import (
 
 	"code.cloudfoundry.org/cephbroker/cephbroker"
 	"code.cloudfoundry.org/cephbroker/utils"
-	ioutilshim "code.cloudfoundry.org/goshims/ioutil"
 	"code.cloudfoundry.org/lager"
 	"github.com/pivotal-cf/brokerapi"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
+	"code.cloudfoundry.org/goshims/ioutilshim"
 )
 
 var dataDir = flag.String(
