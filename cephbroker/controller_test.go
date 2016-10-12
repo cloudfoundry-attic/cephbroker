@@ -26,7 +26,7 @@ var Controller = Describe("Controller", func() {
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-broker")
 		ctx = context.TODO()
-		env = driverhttp.NewHttpDriverEnv(&logger, &ctx)
+		env = driverhttp.NewHttpDriverEnv(logger, ctx)
 		fakeClient = &cephfakes.FakeClient{}
 		subject = cephbroker.NewController(fakeClient)
 	})

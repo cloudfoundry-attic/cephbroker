@@ -29,7 +29,7 @@ func NewController(cephClient Client) Controller {
 }
 
 func (p *controller) Create(env voldriver.Env, createRequest voldriver.CreateRequest) voldriver.ErrorResponse {
-	logger := (*env.Logger()).Session("provision")
+	logger := env.Logger().Session("provision")
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -51,7 +51,7 @@ func (p *controller) Create(env voldriver.Env, createRequest voldriver.CreateReq
 }
 
 func (p *controller) Remove(env voldriver.Env, removeRequest voldriver.RemoveRequest) voldriver.ErrorResponse {
-	logger := (*env.Logger()).Session("remove")
+	logger := env.Logger().Session("remove")
 	logger.Info("start")
 	defer logger.Info("end")
 	err := p.cephClient.DeleteShare(logger, removeRequest.Name)
@@ -63,7 +63,7 @@ func (p *controller) Remove(env voldriver.Env, removeRequest voldriver.RemoveReq
 }
 
 func (p *controller) Bind(env voldriver.Env, instanceID string) BindResponse {
-	logger := (*env.Logger()).Session("bind-service-instance")
+	logger := env.Logger().Session("bind-service-instance")
 	logger.Info("start")
 	defer logger.Info("end")
 	response := BindResponse{}
