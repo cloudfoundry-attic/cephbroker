@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"code.cloudfoundry.org/goshims/ioutilshim/ioutil_fake"
+	"context"
 )
 
 type dynamicState struct {
@@ -26,16 +27,18 @@ type dynamicState struct {
 
 var _ = Describe("Broker", func() {
 	var (
-		broker             brokerapi.ServiceBroker
+		broker             brokerapi.ServiceBrokerWithContext
 		fakeController     *cephfakes.FakeController
 		fakeIoutil         *ioutil_fake.FakeIoutil
 		logger             lager.Logger
+		ctx context.Context
 		WriteFileCallCount int
 		WriteFileWrote     string
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-broker")
+		ctx = context.TODO()
 		fakeController = &cephfakes.FakeController{}
 		fakeIoutil = &ioutil_fake.FakeIoutil{}
 		fakeIoutil.WriteFileStub = func(filename string, data []byte, perm os.FileMode) error {
@@ -68,7 +71,7 @@ var _ = Describe("Broker", func() {
 				fakeIoutil,
 			)
 
-			_, err = broker.Bind("service-name", "whatever", brokerapi.BindDetails{AppGUID: "guid", Parameters: map[string]interface{}{}})
+			_, err = broker.Bind("service-name", "whatever", brokerapi.BindDetails{AppGUID: "guid", Parameters: map[string]interface{}{}}, ctx)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -83,7 +86,7 @@ var _ = Describe("Broker", func() {
 				fakeIoutil,
 			)
 
-			_, err := broker.Bind("service-name", "whatever", brokerapi.BindDetails{AppGUID: "guid", Parameters: map[string]interface{}{}})
+			_, err := broker.Bind("service-name", "whatever", brokerapi.BindDetails{AppGUID: "guid", Parameters: map[string]interface{}{}}, ctx)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -117,7 +120,7 @@ var _ = Describe("Broker", func() {
 
 		Context(".Provision", func() {
 			It("should provision the service instance", func() {
-				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeController.CreateCallCount()).To(Equal(1))
 
@@ -130,7 +133,7 @@ var _ = Describe("Broker", func() {
 			It("should write state", func() {
 				WriteFileCallCount = 0
 				WriteFileWrote = ""
-				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(WriteFileCallCount).To(Equal(1))
 				Expect(WriteFileWrote).To(Equal("{\"InstanceMap\":{\"some-instance-id\":{\"service_id\":\"\",\"plan_id\":\"\",\"organization_guid\":\"\",\"space_guid\":\"\"}},\"BindingMap\":{}}"))
@@ -142,7 +145,7 @@ var _ = Describe("Broker", func() {
 				})
 
 				It("errors", func() {
-					_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+					_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -156,13 +159,13 @@ var _ = Describe("Broker", func() {
 						OrganizationGUID: "org-guid",
 						SpaceGUID:        "space-guid",
 					}
-					_, err := broker.Provision("some-instance-id", details, false)
+					_, err := broker.Provision("some-instance-id", details, false, ctx)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("should error", func() {
 					details.ServiceID = "different-service-id"
-					_, err := broker.Provision("some-instance-id", details, false)
+					_, err := broker.Provision("some-instance-id", details, false, ctx)
 					Expect(err).To(Equal(brokerapi.ErrInstanceAlreadyExists))
 				})
 			})
@@ -170,35 +173,35 @@ var _ = Describe("Broker", func() {
 
 		Context(".Deprovision", func() {
 			BeforeEach(func() {
-				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should deprovision the service", func() {
-				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false)
+				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeController.RemoveCallCount()).To(Equal(1))
 
 				By("checking that we can reprovision a slightly different service")
-				_, err = broker.Provision("some-instance-id", brokerapi.ProvisionDetails{ServiceID: "different-service-id"}, false)
+				_, err = broker.Provision("some-instance-id", brokerapi.ProvisionDetails{ServiceID: "different-service-id"}, false, ctx)
 				Expect(err).NotTo(Equal(brokerapi.ErrInstanceAlreadyExists))
 			})
 
 			It("errors when the service instance does not exist", func() {
-				_, err := broker.Deprovision("some-nonexistant-instance-id", brokerapi.DeprovisionDetails{}, false)
+				_, err := broker.Deprovision("some-nonexistant-instance-id", brokerapi.DeprovisionDetails{}, false, ctx)
 				Expect(err).To(Equal(brokerapi.ErrInstanceDoesNotExist))
 			})
 
 			It("Errors when ceph can't deprovision", func() {
 				fakeController.RemoveReturns(voldriver.ErrorResponse{"something"})
-				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false)
+				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false, ctx)
 				Expect(err.Error()).To(Equal("something"))
 			})
 
 			It("should write state", func() {
 				WriteFileCallCount = 0
 				WriteFileWrote = ""
-				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false)
+				_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(WriteFileCallCount).To(Equal(1))
@@ -211,7 +214,7 @@ var _ = Describe("Broker", func() {
 				})
 
 				It("should error", func() {
-					_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false)
+					_, err := broker.Deprovision("some-instance-id", brokerapi.DeprovisionDetails{}, false, ctx)
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -221,41 +224,41 @@ var _ = Describe("Broker", func() {
 			var bindDetails brokerapi.BindDetails
 
 			BeforeEach(func() {
-				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				bindDetails = brokerapi.BindDetails{AppGUID: "guid", Parameters: map[string]interface{}{}}
 			})
 
 			It("includes empty credentials to prevent CAPI crash", func() {
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(binding.Credentials).NotTo(BeNil())
 			})
 
 			It("uses the instance id in the default container path", func() {
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(binding.VolumeMounts[0].ContainerDir).To(Equal("/var/vcap/data/some-instance-id"))
 			})
 
 			It("flows container path through", func() {
 				bindDetails.Parameters["mount"] = "/var/vcap/otherdir/something"
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(binding.VolumeMounts[0].ContainerDir).To(Equal("/var/vcap/otherdir/something"))
 			})
 
 			It("uses rw as its default mode", func() {
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(binding.VolumeMounts[0].Mode).To(Equal("rw"))
 			})
 
 			It("sets mode to `r` when readonly is true", func() {
 				bindDetails.Parameters["readonly"] = true
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(binding.VolumeMounts[0].Mode).To(Equal("r"))
@@ -264,7 +267,7 @@ var _ = Describe("Broker", func() {
 			It("should write state", func() {
 				WriteFileCallCount = 0
 				WriteFileWrote = ""
-				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(WriteFileCallCount).To(Equal(1))
@@ -273,12 +276,12 @@ var _ = Describe("Broker", func() {
 
 			It("errors if mode is not a boolean", func() {
 				bindDetails.Parameters["readonly"] = ""
-				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).To(Equal(brokerapi.ErrRawParamsInvalid))
 			})
 
 			It("fills in the driver name", func() {
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(binding.VolumeMounts[0].Driver).To(Equal("cephdriver"))
@@ -286,7 +289,7 @@ var _ = Describe("Broker", func() {
 
 			It("fills in the group id", func() {
 				fakeController.BindReturns(cephbroker.BindResponse{SharedDevice: brokerapi.SharedDevice{VolumeId: "some-instance-id"}})
-				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				binding, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(binding.VolumeMounts[0].Device.VolumeId).To(Equal("some-instance-id"))
@@ -294,65 +297,65 @@ var _ = Describe("Broker", func() {
 
 			Context("when the binding already exists", func() {
 				BeforeEach(func() {
-					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"})
+					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"}, ctx)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("doesn't error when binding the same details", func() {
-					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"})
+					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"}, ctx)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("errors when binding different details", func() {
-					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "different"})
+					_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "different"}, ctx)
 					Expect(err).To(Equal(brokerapi.ErrBindingAlreadyExists))
 				})
 			})
 
 			It("errors when the service instance does not exist", func() {
-				_, err := broker.Bind("nonexistant-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"})
+				_, err := broker.Bind("nonexistant-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"}, ctx)
 				Expect(err).To(Equal(brokerapi.ErrInstanceDoesNotExist))
 			})
 
 			It("errors when the app guid is not provided", func() {
-				_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{})
+				_, err := broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{}, ctx)
 				Expect(err).To(Equal(brokerapi.ErrAppGuidNotProvided))
 			})
 
 			It("Errors when ceph can't bind", func() {
 				fakeController.BindReturns(cephbroker.BindResponse{voldriver.ErrorResponse{"something"}, brokerapi.SharedDevice{}})
-				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails)
+				_, err := broker.Bind("some-instance-id", "binding-id", bindDetails, ctx)
 				Expect(err.Error()).To(Equal("something"))
 			})
 		})
 
 		Context(".Unbind", func() {
 			BeforeEach(func() {
-				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false)
+				_, err := broker.Provision("some-instance-id", brokerapi.ProvisionDetails{}, false, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"})
+				_, err = broker.Bind("some-instance-id", "binding-id", brokerapi.BindDetails{AppGUID: "guid"}, ctx)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("unbinds a bound service instance from an app", func() {
-				err := broker.Unbind("some-instance-id", "binding-id", brokerapi.UnbindDetails{})
+				err := broker.Unbind("some-instance-id", "binding-id", brokerapi.UnbindDetails{}, ctx)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("fails when trying to unbind a instance that has not been provisioned", func() {
-				err := broker.Unbind("some-other-instance-id", "binding-id", brokerapi.UnbindDetails{})
+				err := broker.Unbind("some-other-instance-id", "binding-id", brokerapi.UnbindDetails{}, ctx)
 				Expect(err).To(Equal(brokerapi.ErrInstanceDoesNotExist))
 			})
 
 			It("fails when trying to unbind a binding that has not been bound", func() {
-				err := broker.Unbind("some-instance-id", "some-other-binding-id", brokerapi.UnbindDetails{})
+				err := broker.Unbind("some-instance-id", "some-other-binding-id", brokerapi.UnbindDetails{}, ctx)
 				Expect(err).To(Equal(brokerapi.ErrBindingDoesNotExist))
 			})
 			It("should write state", func() {
 				WriteFileCallCount = 0
 				WriteFileWrote = ""
-				err := broker.Unbind("some-instance-id", "binding-id", brokerapi.UnbindDetails{})
+				err := broker.Unbind("some-instance-id", "binding-id", brokerapi.UnbindDetails{}, ctx)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(WriteFileCallCount).To(Equal(1))
@@ -372,16 +375,16 @@ var _ = Describe("Broker", func() {
 
 					broker.Services()
 
-					_, err := broker.Provision(uniqueName, brokerapi.ProvisionDetails{}, false)
+					_, err := broker.Provision(uniqueName, brokerapi.ProvisionDetails{}, false, ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = broker.Bind(uniqueName, "binding-id", brokerapi.BindDetails{AppGUID: "guid"})
+					_, err = broker.Bind(uniqueName, "binding-id", brokerapi.BindDetails{AppGUID: "guid"}, ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = broker.Unbind(uniqueName, "some-other-binding-id", brokerapi.UnbindDetails{})
+					err = broker.Unbind(uniqueName, "some-other-binding-id", brokerapi.UnbindDetails{}, ctx)
 					Expect(err).To(Equal(brokerapi.ErrBindingDoesNotExist))
 
-					_, err = broker.Deprovision(uniqueName, brokerapi.DeprovisionDetails{}, false)
+					_, err = broker.Deprovision(uniqueName, brokerapi.DeprovisionDetails{}, false, ctx)
 					Expect(err).NotTo(HaveOccurred())
 				}
 

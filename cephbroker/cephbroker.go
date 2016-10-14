@@ -105,7 +105,7 @@ func (b *broker) Services() []brokerapi.Service {
 	}}
 }
 
-func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool, context context.Context) (brokerapi.ProvisionedServiceSpec, error) {
 	logger := b.logger.Session("provision")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -120,10 +120,7 @@ func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails
 		return brokerapi.ProvisionedServiceSpec{}, brokerapi.ErrInstanceAlreadyExists
 	}
 
-	ctx := context.TODO()
-	env := driverhttp.NewHttpDriverEnv(logger, ctx)
-
-	errResp := b.controller.Create(env, voldriver.CreateRequest{
+	errResp := b.controller.Create(driverhttp.NewHttpDriverEnv(logger,context), voldriver.CreateRequest{
 		Name: instanceID,
 		Opts: map[string]interface{}{"volume_id": instanceID},
 	})
@@ -139,7 +136,7 @@ func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails
 	return brokerapi.ProvisionedServiceSpec{}, nil
 }
 
-func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool, context context.Context) (brokerapi.DeprovisionServiceSpec, error) {
 	logger := b.logger.Session("deprovision")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -153,10 +150,7 @@ func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDet
 		return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 	}
 
-	ctx := context.TODO()
-	env := driverhttp.NewHttpDriverEnv(logger, ctx)
-
-	errResp := b.controller.Remove(env, voldriver.RemoveRequest{
+	errResp := b.controller.Remove(driverhttp.NewHttpDriverEnv(logger, context), voldriver.RemoveRequest{
 		Name: instanceID,
 	})
 
@@ -171,7 +165,7 @@ func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDet
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
 
-func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
+func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.BindDetails, context context.Context) (brokerapi.Binding, error) {
 	logger := b.logger.Session("bind")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -198,10 +192,7 @@ func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.Bin
 		return brokerapi.Binding{}, brokerapi.ErrBindingAlreadyExists
 	}
 
-	ctx := context.TODO()
-	env := driverhttp.NewHttpDriverEnv(logger, ctx)
-
-	response := b.controller.Bind(env, instanceID)
+	response := b.controller.Bind(driverhttp.NewHttpDriverEnv(logger, context), instanceID)
 
 	if response.Err != "" {
 		err := errors.New(response.Err)
@@ -223,7 +214,7 @@ func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.Bin
 	}, nil
 }
 
-func (b *broker) Unbind(instanceID string, bindingID string, details brokerapi.UnbindDetails) error {
+func (b *broker) Unbind(instanceID string, bindingID string, details brokerapi.UnbindDetails, _ context.Context) error {
 	logger := b.logger.Session("unbind")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -246,7 +237,7 @@ func (b *broker) Unbind(instanceID string, bindingID string, details brokerapi.U
 	return nil
 }
 
-func (b *broker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
+func (b *broker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool, _ context.Context) (brokerapi.UpdateServiceSpec, error) {
 	panic("not implemented")
 }
 
