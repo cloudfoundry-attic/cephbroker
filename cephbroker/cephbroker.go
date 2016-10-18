@@ -105,7 +105,7 @@ func (b *broker) Services() []brokerapi.Service {
 	}}
 }
 
-func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool, context context.Context) (brokerapi.ProvisionedServiceSpec, error) {
+func (b *broker) Provision(context context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
 	logger := b.logger.Session("provision")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -136,7 +136,7 @@ func (b *broker) Provision(instanceID string, details brokerapi.ProvisionDetails
 	return brokerapi.ProvisionedServiceSpec{}, nil
 }
 
-func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool, context context.Context) (brokerapi.DeprovisionServiceSpec, error) {
+func (b *broker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
 	logger := b.logger.Session("deprovision")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -165,7 +165,7 @@ func (b *broker) Deprovision(instanceID string, details brokerapi.DeprovisionDet
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
 
-func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.BindDetails, context context.Context) (brokerapi.Binding, error) {
+func (b *broker) Bind(context context.Context, instanceID string, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
 	logger := b.logger.Session("bind")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -214,7 +214,7 @@ func (b *broker) Bind(instanceID string, bindingID string, details brokerapi.Bin
 	}, nil
 }
 
-func (b *broker) Unbind(instanceID string, bindingID string, details brokerapi.UnbindDetails, _ context.Context) error {
+func (b *broker) Unbind(context context.Context, instanceID string, bindingID string, details brokerapi.UnbindDetails) error {
 	logger := b.logger.Session("unbind")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -237,7 +237,7 @@ func (b *broker) Unbind(instanceID string, bindingID string, details brokerapi.U
 	return nil
 }
 
-func (b *broker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool, _ context.Context) (brokerapi.UpdateServiceSpec, error) {
+func (b *broker) Update(context context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
 	panic("not implemented")
 }
 

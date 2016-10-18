@@ -126,13 +126,13 @@ func createServer(logger lager.Logger) ifrit.Runner {
 		*keyringFile,
 		*baseRemoteMountPath,
 	))
-	serviceBrokerWithContext := cephbroker.New(
+	serviceBroker := cephbroker.New(
 		logger, controller,
 		*serviceName, *serviceId, *planName, *planId, *planDesc, *dataDir,
 		&ioutilshim.IoutilShim{},
 	)
 	credentials := brokerapi.BrokerCredentials{Username: *username, Password: *password}
-	handler := brokerapi.NewWithContext(serviceBrokerWithContext, logger.Session("broker-api"), credentials)
+	handler := brokerapi.New(serviceBroker, logger.Session("broker-api"), credentials)
 
 	return http_server.New(*atAddress, handler)
 }
