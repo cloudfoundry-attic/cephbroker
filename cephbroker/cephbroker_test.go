@@ -103,7 +103,7 @@ var _ = Describe("Broker", func() {
 
 		Context(".Services", func() {
 			It("returns the service catalog as appropriate", func() {
-				result := broker.Services()[0]
+				result := broker.Services(ctx)[0]
 				Expect(result.ID).To(Equal("service-id"))
 				Expect(result.Name).To(Equal("service-name"))
 				Expect(result.Description).To(Equal("CephFS service docs: https://code.cloudfoundry.org/cephfs-bosh-release/"))
@@ -373,7 +373,7 @@ var _ = Describe("Broker", func() {
 					defer GinkgoRecover()
 					defer wg.Done()
 
-					broker.Services()
+					broker.Services(ctx)
 
 					_, err := broker.Provision(ctx, uniqueName, brokerapi.ProvisionDetails{}, false)
 					Expect(err).NotTo(HaveOccurred())
