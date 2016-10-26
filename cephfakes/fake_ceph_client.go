@@ -5,51 +5,51 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/cephbroker/cephbroker"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/voldriver"
 )
 
 type FakeClient struct {
-	IsFilesystemMountedStub        func(lager.Logger) bool
+	IsFilesystemMountedStub        func(voldriver.Env) bool
 	isFilesystemMountedMutex       sync.RWMutex
 	isFilesystemMountedArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 	}
 	isFilesystemMountedReturns struct {
 		result1 bool
 	}
-	MountFileSystemStub        func(lager.Logger, string) (string, error)
+	MountFileSystemStub        func(voldriver.Env, string) (string, error)
 	mountFileSystemMutex       sync.RWMutex
 	mountFileSystemArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}
 	mountFileSystemReturns struct {
 		result1 string
 		result2 error
 	}
-	CreateShareStub        func(lager.Logger, string) (string, error)
+	CreateShareStub        func(voldriver.Env, string) (string, error)
 	createShareMutex       sync.RWMutex
 	createShareArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}
 	createShareReturns struct {
 		result1 string
 		result2 error
 	}
-	DeleteShareStub        func(lager.Logger, string) error
+	DeleteShareStub        func(voldriver.Env, string) error
 	deleteShareMutex       sync.RWMutex
 	deleteShareArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}
 	deleteShareReturns struct {
 		result1 error
 	}
-	GetPathsForShareStub        func(lager.Logger, string) (string, string, error)
+	GetPathsForShareStub        func(voldriver.Env, string) (string, string, error)
 	getPathsForShareMutex       sync.RWMutex
 	getPathsForShareArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}
 	getPathsForShareReturns struct {
@@ -57,10 +57,10 @@ type FakeClient struct {
 		result2 string
 		result3 error
 	}
-	GetConfigDetailsStub        func(lager.Logger) (string, string, error)
+	GetConfigDetailsStub        func(voldriver.Env) (string, string, error)
 	getConfigDetailsMutex       sync.RWMutex
 	getConfigDetailsArgsForCall []struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 	}
 	getConfigDetailsReturns struct {
 		result1 string
@@ -71,10 +71,10 @@ type FakeClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClient) IsFilesystemMounted(arg1 lager.Logger) bool {
+func (fake *FakeClient) IsFilesystemMounted(arg1 voldriver.Env) bool {
 	fake.isFilesystemMountedMutex.Lock()
 	fake.isFilesystemMountedArgsForCall = append(fake.isFilesystemMountedArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 	}{arg1})
 	fake.recordInvocation("IsFilesystemMounted", []interface{}{arg1})
 	fake.isFilesystemMountedMutex.Unlock()
@@ -91,7 +91,7 @@ func (fake *FakeClient) IsFilesystemMountedCallCount() int {
 	return len(fake.isFilesystemMountedArgsForCall)
 }
 
-func (fake *FakeClient) IsFilesystemMountedArgsForCall(i int) lager.Logger {
+func (fake *FakeClient) IsFilesystemMountedArgsForCall(i int) voldriver.Env {
 	fake.isFilesystemMountedMutex.RLock()
 	defer fake.isFilesystemMountedMutex.RUnlock()
 	return fake.isFilesystemMountedArgsForCall[i].arg1
@@ -104,10 +104,10 @@ func (fake *FakeClient) IsFilesystemMountedReturns(result1 bool) {
 	}{result1}
 }
 
-func (fake *FakeClient) MountFileSystem(arg1 lager.Logger, arg2 string) (string, error) {
+func (fake *FakeClient) MountFileSystem(arg1 voldriver.Env, arg2 string) (string, error) {
 	fake.mountFileSystemMutex.Lock()
 	fake.mountFileSystemArgsForCall = append(fake.mountFileSystemArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}{arg1, arg2})
 	fake.recordInvocation("MountFileSystem", []interface{}{arg1, arg2})
@@ -125,7 +125,7 @@ func (fake *FakeClient) MountFileSystemCallCount() int {
 	return len(fake.mountFileSystemArgsForCall)
 }
 
-func (fake *FakeClient) MountFileSystemArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeClient) MountFileSystemArgsForCall(i int) (voldriver.Env, string) {
 	fake.mountFileSystemMutex.RLock()
 	defer fake.mountFileSystemMutex.RUnlock()
 	return fake.mountFileSystemArgsForCall[i].arg1, fake.mountFileSystemArgsForCall[i].arg2
@@ -139,10 +139,10 @@ func (fake *FakeClient) MountFileSystemReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeClient) CreateShare(arg1 lager.Logger, arg2 string) (string, error) {
+func (fake *FakeClient) CreateShare(arg1 voldriver.Env, arg2 string) (string, error) {
 	fake.createShareMutex.Lock()
 	fake.createShareArgsForCall = append(fake.createShareArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}{arg1, arg2})
 	fake.recordInvocation("CreateShare", []interface{}{arg1, arg2})
@@ -160,7 +160,7 @@ func (fake *FakeClient) CreateShareCallCount() int {
 	return len(fake.createShareArgsForCall)
 }
 
-func (fake *FakeClient) CreateShareArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeClient) CreateShareArgsForCall(i int) (voldriver.Env, string) {
 	fake.createShareMutex.RLock()
 	defer fake.createShareMutex.RUnlock()
 	return fake.createShareArgsForCall[i].arg1, fake.createShareArgsForCall[i].arg2
@@ -174,10 +174,10 @@ func (fake *FakeClient) CreateShareReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeClient) DeleteShare(arg1 lager.Logger, arg2 string) error {
+func (fake *FakeClient) DeleteShare(arg1 voldriver.Env, arg2 string) error {
 	fake.deleteShareMutex.Lock()
 	fake.deleteShareArgsForCall = append(fake.deleteShareArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}{arg1, arg2})
 	fake.recordInvocation("DeleteShare", []interface{}{arg1, arg2})
@@ -195,7 +195,7 @@ func (fake *FakeClient) DeleteShareCallCount() int {
 	return len(fake.deleteShareArgsForCall)
 }
 
-func (fake *FakeClient) DeleteShareArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeClient) DeleteShareArgsForCall(i int) (voldriver.Env, string) {
 	fake.deleteShareMutex.RLock()
 	defer fake.deleteShareMutex.RUnlock()
 	return fake.deleteShareArgsForCall[i].arg1, fake.deleteShareArgsForCall[i].arg2
@@ -208,10 +208,10 @@ func (fake *FakeClient) DeleteShareReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeClient) GetPathsForShare(arg1 lager.Logger, arg2 string) (string, string, error) {
+func (fake *FakeClient) GetPathsForShare(arg1 voldriver.Env, arg2 string) (string, string, error) {
 	fake.getPathsForShareMutex.Lock()
 	fake.getPathsForShareArgsForCall = append(fake.getPathsForShareArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 		arg2 string
 	}{arg1, arg2})
 	fake.recordInvocation("GetPathsForShare", []interface{}{arg1, arg2})
@@ -229,7 +229,7 @@ func (fake *FakeClient) GetPathsForShareCallCount() int {
 	return len(fake.getPathsForShareArgsForCall)
 }
 
-func (fake *FakeClient) GetPathsForShareArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeClient) GetPathsForShareArgsForCall(i int) (voldriver.Env, string) {
 	fake.getPathsForShareMutex.RLock()
 	defer fake.getPathsForShareMutex.RUnlock()
 	return fake.getPathsForShareArgsForCall[i].arg1, fake.getPathsForShareArgsForCall[i].arg2
@@ -244,10 +244,10 @@ func (fake *FakeClient) GetPathsForShareReturns(result1 string, result2 string, 
 	}{result1, result2, result3}
 }
 
-func (fake *FakeClient) GetConfigDetails(arg1 lager.Logger) (string, string, error) {
+func (fake *FakeClient) GetConfigDetails(arg1 voldriver.Env) (string, string, error) {
 	fake.getConfigDetailsMutex.Lock()
 	fake.getConfigDetailsArgsForCall = append(fake.getConfigDetailsArgsForCall, struct {
-		arg1 lager.Logger
+		arg1 voldriver.Env
 	}{arg1})
 	fake.recordInvocation("GetConfigDetails", []interface{}{arg1})
 	fake.getConfigDetailsMutex.Unlock()
@@ -264,7 +264,7 @@ func (fake *FakeClient) GetConfigDetailsCallCount() int {
 	return len(fake.getConfigDetailsArgsForCall)
 }
 
-func (fake *FakeClient) GetConfigDetailsArgsForCall(i int) lager.Logger {
+func (fake *FakeClient) GetConfigDetailsArgsForCall(i int) voldriver.Env {
 	fake.getConfigDetailsMutex.RLock()
 	defer fake.getConfigDetailsMutex.RUnlock()
 	return fake.getConfigDetailsArgsForCall[i].arg1

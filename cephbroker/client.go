@@ -11,17 +11,19 @@ import (
 	"code.cloudfoundry.org/goshims/ioutilshim"
 	"code.cloudfoundry.org/goshims/osshim"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/voldriver"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 )
 
 //go:generate counterfeiter -o ../cephfakes/fake_ceph_client.go . Client
 
 type Client interface {
-	IsFilesystemMounted(lager.Logger) bool
-	MountFileSystem(lager.Logger, string) (string, error)
-	CreateShare(lager.Logger, string) (string, error)
-	DeleteShare(lager.Logger, string) error
-	GetPathsForShare(lager.Logger, string) (string, string, error)
-	GetConfigDetails(lager.Logger) (string, string, error)
+	IsFilesystemMounted(voldriver.Env) bool
+	MountFileSystem(voldriver.Env, string) (string, error)
+	CreateShare(voldriver.Env, string) (string, error)
+	DeleteShare(voldriver.Env, string) error
+	GetPathsForShare(voldriver.Env, string) (string, string, error)
+	GetConfigDetails(voldriver.Env) (string, string, error)
 }
 
 type cephClient struct {
@@ -65,15 +67,15 @@ func NewCephClient(mds string, localMountPoint string, keyringFile string, remot
 		remoteMountPath:     remoteMountPath,
 	}
 }
-func (c *cephClient) IsFilesystemMounted(logger lager.Logger) bool {
-	logger = logger.Session("is-filesystem-mounted")
+func (c *cephClient) IsFilesystemMounted(env voldriver.Env) bool {
+	logger := env.Logger().Session("is-filesystem-mounted")
 	logger.Info("start")
 	defer logger.Info("end")
 	return c.mounted
 }
 
-func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint string) (string, error) {
-	logger = logger.Session("mount-filesystem", lager.Data{"remoteMountPoint": remoteMountPoint})
+func (c *cephClient) MountFileSystem(env voldriver.Env, remoteMountPoint string) (string, error) {
+	logger := env.Logger().Session("mount-filesystem", lager.Data{"remoteMountPoint": remoteMountPoint})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -84,7 +86,7 @@ func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 	}
 
 	cmdArgs := []string{"-m", c.mds, "-k", c.keyring, "-r", remoteMountPoint, c.baseLocalMountPoint}
-	err = c.invokeCeph(logger, cmdArgs)
+	err = c.invokeCeph(driverhttp.EnvWithLogger(logger,env), cmdArgs)
 	if err != nil {
 		logger.Error("cephfs-error", err)
 		return "", err
@@ -93,8 +95,8 @@ func (c *cephClient) MountFileSystem(logger lager.Logger, remoteMountPoint strin
 	return c.baseLocalMountPoint, nil
 }
 
-func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string, error) {
-	logger = logger.Session("create-share", lager.Data{"shareName": shareName})
+func (c *cephClient) CreateShare(env voldriver.Env, shareName string) (string, error) {
+	logger := env.Logger().Session("create-share", lager.Data{"shareName": shareName})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -107,8 +109,8 @@ func (c *cephClient) CreateShare(logger lager.Logger, shareName string) (string,
 	return sharePath, nil
 }
 
-func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
-	logger = logger.Session("delete-share", lager.Data{"shareName": shareName})
+func (c *cephClient) DeleteShare(env voldriver.Env, shareName string) error {
+	logger := env.Logger().Session("delete-share", lager.Data{"shareName": shareName})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -121,8 +123,8 @@ func (c *cephClient) DeleteShare(logger lager.Logger, shareName string) error {
 	return nil
 }
 
-func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (string, string, error) {
-	logger = logger.Session("get-paths-for-share", lager.Data{shareName: shareName})
+func (c *cephClient) GetPathsForShare(env voldriver.Env, shareName string) (string, string, error) {
+	logger := env.Logger().Session("get-paths-for-share", lager.Data{shareName: shareName})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -138,7 +140,8 @@ func (c *cephClient) GetPathsForShare(logger lager.Logger, shareName string) (st
 	return shareAbsPath, cellPath, nil
 }
 
-func (c *cephClient) GetConfigDetails(logger lager.Logger) (string, string, error) {
+func (c *cephClient) GetConfigDetails(env voldriver.Env) (string, string, error) {
+	logger := env.Logger().Session("get-config-details")
 	if c.mds == "" || c.keyring == "" {
 		return "", "", fmt.Errorf("Error retreiving Ceph config details")
 	}
@@ -150,17 +153,18 @@ func (c *cephClient) GetConfigDetails(logger lager.Logger) (string, string, erro
 	return c.mds, string(contents), nil
 }
 
-func (c *cephClient) invokeCeph(logger lager.Logger, args []string) error {
+func (c *cephClient) invokeCeph(env voldriver.Env, args []string) error {
+	logger := env.Logger().Session("invoke-ceph")
 	cmd := "ceph-fuse"
 	logger.Info("invoking-ceph", lager.Data{"cmd": cmd, "args": args})
 	defer logger.Debug("done-invoking-ceph")
-	return c.invoker.Invoke(logger, cmd, args)
+	return c.invoker.Invoke(driverhttp.EnvWithLogger(logger,env), cmd, args)
 }
 
 //go:generate counterfeiter -o ../cephfakes/fake_invoker.go . Invoker
 
 type Invoker interface {
-	Invoke(logger lager.Logger, executable string, args []string) error
+	Invoke(env voldriver.Env, executable string, args []string) error
 }
 
 type realInvoker struct {
@@ -175,8 +179,12 @@ func NewRealInvokerWithExec(useExec execshim.Exec) Invoker {
 	return &realInvoker{useExec}
 }
 
-func (r *realInvoker) Invoke(logger lager.Logger, executable string, cmdArgs []string) error {
-	cmdHandle := r.useExec.Command(executable, cmdArgs...)
+func (r *realInvoker) Invoke(env voldriver.Env, executable string, cmdArgs []string) error {
+	logger := env.Logger().Session("invoke")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	cmdHandle := r.useExec.CommandContext(env.Context(), executable, cmdArgs...)
 
 	_, err := cmdHandle.StdoutPipe()
 	if err != nil {

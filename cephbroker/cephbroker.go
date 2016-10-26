@@ -214,7 +214,7 @@ func (b *broker) Bind(context context.Context, instanceID string, bindingID stri
 	}, nil
 }
 
-func (b *broker) Unbind(context context.Context, instanceID string, bindingID string, details brokerapi.UnbindDetails) error {
+func (b *broker) Unbind(_ context.Context, instanceID string, bindingID string, details brokerapi.UnbindDetails) error {
 	logger := b.logger.Session("unbind")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -237,7 +237,7 @@ func (b *broker) Unbind(context context.Context, instanceID string, bindingID st
 	return nil
 }
 
-func (b *broker) Update(context context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
+func (b *broker) Update(_ context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
 	panic("not implemented")
 }
 

@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/cephbroker/cephbroker"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/voldriver"
 )
 
 type FakeInvoker struct {
-	InvokeStub        func(logger lager.Logger, executable string, args []string) error
+	InvokeStub        func(env voldriver.Env, executable string, args []string) error
 	invokeMutex       sync.RWMutex
 	invokeArgsForCall []struct {
-		logger     lager.Logger
+		env        voldriver.Env
 		executable string
 		args       []string
 	}
@@ -23,7 +23,7 @@ type FakeInvoker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeInvoker) Invoke(logger lager.Logger, executable string, args []string) error {
+func (fake *FakeInvoker) Invoke(env voldriver.Env, executable string, args []string) error {
 	var argsCopy []string
 	if args != nil {
 		argsCopy = make([]string, len(args))
@@ -31,14 +31,14 @@ func (fake *FakeInvoker) Invoke(logger lager.Logger, executable string, args []s
 	}
 	fake.invokeMutex.Lock()
 	fake.invokeArgsForCall = append(fake.invokeArgsForCall, struct {
-		logger     lager.Logger
+		env        voldriver.Env
 		executable string
 		args       []string
-	}{logger, executable, argsCopy})
-	fake.recordInvocation("Invoke", []interface{}{logger, executable, argsCopy})
+	}{env, executable, argsCopy})
+	fake.recordInvocation("Invoke", []interface{}{env, executable, argsCopy})
 	fake.invokeMutex.Unlock()
 	if fake.InvokeStub != nil {
-		return fake.InvokeStub(logger, executable, args)
+		return fake.InvokeStub(env, executable, args)
 	} else {
 		return fake.invokeReturns.result1
 	}
@@ -50,10 +50,10 @@ func (fake *FakeInvoker) InvokeCallCount() int {
 	return len(fake.invokeArgsForCall)
 }
 
-func (fake *FakeInvoker) InvokeArgsForCall(i int) (lager.Logger, string, []string) {
+func (fake *FakeInvoker) InvokeArgsForCall(i int) (voldriver.Env, string, []string) {
 	fake.invokeMutex.RLock()
 	defer fake.invokeMutex.RUnlock()
-	return fake.invokeArgsForCall[i].logger, fake.invokeArgsForCall[i].executable, fake.invokeArgsForCall[i].args
+	return fake.invokeArgsForCall[i].env, fake.invokeArgsForCall[i].executable, fake.invokeArgsForCall[i].args
 }
 
 func (fake *FakeInvoker) InvokeReturns(result1 error) {

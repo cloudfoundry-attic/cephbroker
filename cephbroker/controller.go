@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/voldriver"
 	"github.com/pivotal-cf/brokerapi"
+	"code.cloudfoundry.org/voldriver/driverhttp"
 )
 
 type BindResponse struct {
@@ -33,14 +34,14 @@ func (p *controller) Create(env voldriver.Env, createRequest voldriver.CreateReq
 	logger.Info("start")
 	defer logger.Info("end")
 
-	mounted := p.cephClient.IsFilesystemMounted(logger)
+	mounted := p.cephClient.IsFilesystemMounted(driverhttp.EnvWithLogger(logger,env))
 	if !mounted {
-		_, err := p.cephClient.MountFileSystem(logger, "/")
+		_, err := p.cephClient.MountFileSystem(driverhttp.EnvWithLogger(logger,env), "/")
 		if err != nil {
 			return voldriver.ErrorResponse{Err: err.Error()}
 		}
 	}
-	mountpoint, err := p.cephClient.CreateShare(logger, createRequest.Name)
+	mountpoint, err := p.cephClient.CreateShare(driverhttp.EnvWithLogger(logger,env), createRequest.Name)
 	if err != nil {
 		return voldriver.ErrorResponse{Err: err.Error()}
 	}
@@ -54,7 +55,7 @@ func (p *controller) Remove(env voldriver.Env, removeRequest voldriver.RemoveReq
 	logger := env.Logger().Session("remove")
 	logger.Info("start")
 	defer logger.Info("end")
-	err := p.cephClient.DeleteShare(logger, removeRequest.Name)
+	err := p.cephClient.DeleteShare(driverhttp.EnvWithLogger(logger,env), removeRequest.Name)
 	if err != nil {
 		logger.Error("Error deleting share", err)
 		return voldriver.ErrorResponse{Err: err.Error()}
@@ -68,14 +69,14 @@ func (p *controller) Bind(env voldriver.Env, instanceID string) BindResponse {
 	defer logger.Info("end")
 	response := BindResponse{}
 
-	remoteSharePath, localMountPoint, err := p.cephClient.GetPathsForShare(logger, instanceID)
+	remoteSharePath, localMountPoint, err := p.cephClient.GetPathsForShare(driverhttp.EnvWithLogger(logger,env), instanceID)
 	if err != nil {
 		logger.Error("failed-getting-paths-for-share", err)
 		response.Err = err.Error()
 		return response
 	}
 
-	mds, keyring, err := p.cephClient.GetConfigDetails(logger)
+	mds, keyring, err := p.cephClient.GetConfigDetails(driverhttp.EnvWithLogger(logger,env))
 	if err != nil {
 		logger.Error("failed-to-determine-container-mountpath", err)
 		response.Err = err.Error()
