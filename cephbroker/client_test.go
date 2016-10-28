@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"fmt"
 
+	"context"
+
 	"code.cloudfoundry.org/cephbroker/cephbroker"
 	"code.cloudfoundry.org/cephbroker/cephfakes"
 	"code.cloudfoundry.org/goshims/execshim/exec_fake"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"code.cloudfoundry.org/goshims/ioutilshim/ioutil_fake"
 	"code.cloudfoundry.org/goshims/osshim/os_fake"
-	"context"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/voldriver"
 	"code.cloudfoundry.org/voldriver/driverhttp"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var CephClient = Describe("CephClient", func() {
 	var (
 		logger      lager.Logger
-		ctx					context.Context
-		env					voldriver.Env
+		ctx         context.Context
+		env         voldriver.Env
 		subject     cephbroker.Client
 		fakeInvoker *cephfakes.FakeInvoker
 		fakeOs      *os_fake.FakeOs
@@ -62,7 +63,7 @@ var CephClient = Describe("CephClient", func() {
 			path1, path2, err := subject.GetPathsForShare(env, "sharename")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path1).To(Equal("sharename"))
-			Expect(path2).To(Equal("/var/vcap/data/volumes/sharename"))
+			Expect(path2).To(Equal("/var/vcap/data/volumes/ceph/sharename"))
 		})
 	})
 	Context(".GetConfigDetails", func() {
@@ -81,8 +82,8 @@ var Invoker = Describe("RealInvoker", func() {
 		fakeCmd    *exec_fake.FakeCmd
 		fakeExec   *exec_fake.FakeExec
 		testLogger = lagertest.NewTestLogger("InvokerTest")
-		testCtx = context.TODO()
-		testEnv voldriver.Env
+		testCtx    = context.TODO()
+		testEnv    voldriver.Env
 		cmd        = "some-fake-command"
 		args       = []string{"fake-args-1"}
 	)
