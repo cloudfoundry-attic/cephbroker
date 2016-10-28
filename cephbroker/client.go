@@ -37,7 +37,7 @@ type cephClient struct {
 	remoteMountPath     string
 }
 
-const CellBasePath string = "/var/vcap/data/volumes/"
+const CellBasePath string = "/var/vcap/data/volumes/ceph/"
 
 var (
 	ShareNotFound   error = errors.New("share not found, internal error")
@@ -86,7 +86,7 @@ func (c *cephClient) MountFileSystem(env voldriver.Env, remoteMountPoint string)
 	}
 
 	cmdArgs := []string{"-m", c.mds, "-k", c.keyring, "-r", remoteMountPoint, c.baseLocalMountPoint}
-	err = c.invokeCeph(driverhttp.EnvWithLogger(logger,env), cmdArgs)
+	err = c.invokeCeph(driverhttp.EnvWithLogger(logger, env), cmdArgs)
 	if err != nil {
 		logger.Error("cephfs-error", err)
 		return "", err
@@ -158,7 +158,7 @@ func (c *cephClient) invokeCeph(env voldriver.Env, args []string) error {
 	cmd := "ceph-fuse"
 	logger.Info("invoking-ceph", lager.Data{"cmd": cmd, "args": args})
 	defer logger.Debug("done-invoking-ceph")
-	return c.invoker.Invoke(driverhttp.EnvWithLogger(logger,env), cmd, args)
+	return c.invoker.Invoke(driverhttp.EnvWithLogger(logger, env), cmd, args)
 }
 
 //go:generate counterfeiter -o ../cephfakes/fake_invoker.go . Invoker
