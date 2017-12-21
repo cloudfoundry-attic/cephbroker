@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 
-	"code.cloudfoundry.org/cflager"
 	"code.cloudfoundry.org/debugserver"
 
 	"syscall"
@@ -16,6 +15,7 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"code.cloudfoundry.org/goshims/ioutilshim"
+	"code.cloudfoundry.org/lager/lagerflags"
 )
 
 var dataDir = flag.String(
@@ -95,7 +95,7 @@ func main() {
 	parseCommandLine()
 	syscall.Umask(000)
 
-	logger, logSink := cflager.New("localbroker")
+	logger, logSink := lagerflags.New("localbroker")
 	logger.Info("starting")
 	defer logger.Info("ends")
 
@@ -114,7 +114,7 @@ func main() {
 }
 
 func parseCommandLine() {
-	cflager.AddFlags(flag.CommandLine)
+	lagerflags.AddFlags(flag.CommandLine)
 	debugserver.AddFlags(flag.CommandLine)
 	flag.Parse()
 }
